@@ -1,5 +1,5 @@
 // מעבר בין מסכים, ומסך "בניית הסל". מיילסטון 2: מסך אחד.
-import * as basket from "./basket.js";
+import * as basket from "./basket.js?v=2";
 
 const $ = (id) => document.getElementById(id);
 
@@ -167,7 +167,7 @@ function handleClick(event) {
 
 async function init() {
   try {
-    const res = await fetch("data/products.json");
+    const res = await fetch("data/products.json?v=2");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     products = await res.json();
   } catch {
