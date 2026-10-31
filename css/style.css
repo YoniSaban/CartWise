@@ -1,16 +1,19 @@
 :root {
   --cream: #FDF8F0;
   --white: #FFFFFF;
+  --warm: #FDEDD4;
   --blue: #1A4B8A;
   --blue-dark: #24466A;
+  --sky: #CBDCEE;
   --green: #1E7A45;
   --text: #1F2A44;
   --text-muted: #5B6475;
   --border: #E3E8EF;
   --field-border: #CCD5E2;
+  --warning: #B54708;
   --error: #B42318;
-  --error-bg: #FEECEB;
-  --ok-bg: #E8F4EC;
+  --shadow: 0 2px 8px rgba(31, 42, 68, 0.06);
+  --radius: 12px;
 }
 
 * { box-sizing: border-box; }
@@ -18,60 +21,214 @@
 body {
   margin: 0;
   font-family: "Rubik", system-ui, sans-serif;
+  font-size: 15px;
   background: var(--cream);
   color: var(--text);
   line-height: 1.5;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .topbar {
   background: var(--blue-dark);
   color: var(--white);
-  padding: 14px 16px;
+  padding: 16px;
 }
 
-.topbar h1 {
-  margin: 0;
-  font-size: 1.4rem;
+.brand {
+  max-width: 560px;
+  margin: 0 auto;
+  font-size: 20px;
   font-weight: 700;
 }
 
 main {
-  max-width: 640px;
+  max-width: 560px;
   margin: 0 auto;
-  padding: 20px 16px;
+  padding: 24px 16px 0;
 }
 
-h2 { margin: 0 0 4px; font-size: 1.3rem; }
+h1 { margin: 0 0 4px; font-size: 28px; font-weight: 700; }
 
-.subtitle { margin: 0 0 20px; color: var(--text-muted); }
+h2 { margin: 24px 0 8px; font-size: 16px; font-weight: 700; }
 
-.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.subtitle { margin: 0 0 16px; color: var(--text-muted); }
 
-.check {
+.note { margin: 0; font-size: 13px; color: var(--text-muted); }
+.note:empty { display: none; }
+.center { text-align: center; }
+
+/* חיפוש וקטגוריות: שתי שורות קבועות, בלי גלילה.
+   עליונה: חיפוש, "כל הסל", "מזון יבש", "לחם". תחתונה: שאר הקטגוריות */
+.filters { display: grid; gap: 8px; }
+
+.toolbar { display: flex; align-items: center; gap: 8px; }
+
+.search { position: relative; flex: 1; min-width: 0; }
+
+.search input {
+  width: 100%;
+  height: 48px;
+  font: inherit;
+  color: var(--text);
   background: var(--white);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 16px;
-  display: grid;
-  gap: 6px;
+  border: 1.5px solid var(--field-border);
+  border-radius: var(--radius);
+  padding: 0 36px 0 4px;
 }
 
-.check-name { font-weight: 500; }
+.search input::placeholder { color: var(--text-muted); }
 
-.check-result { color: var(--text-muted); overflow-wrap: anywhere; }
-.check-result.ok { color: var(--green); }
-.check-result.fail { color: var(--error); }
+.search-icon {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  width: 20px;
+  height: 20px;
+  transform: translateY(-50%);
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.categories { display: flex; gap: 8px; }
+
+/* בשורה העליונה הכפתורים ברוחב קבוע, כדי ש"לחם" יהיה אובלי כמו השאר */
+.toolbar .chip { min-width: 92px; }
+
+.categories-bottom { display: grid; grid-template-columns: repeat(4, 1fr); }
+
+.chip {
+  flex-shrink: 0;
+  min-height: 48px;
+  padding: 0 10px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--blue);
+  background: var(--white);
+  border: 1.5px solid var(--field-border);
+  border-radius: 999px;
+}
+
+.chip[aria-pressed="true"] {
+  color: var(--white);
+  background: var(--blue);
+  border-color: var(--blue);
+}
+
+/* בטלפון השמות הארוכים בשורה התחתונה נשברים לשתי שורות בתוך הכפתור */
+.categories-bottom .chip { padding: 0 6px; font-size: 13px; white-space: normal; }
+
+/* רשימות וכרטיסים */
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+
+.products {
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 4px;
+  margin: 0 -4px;
+  border-radius: 16px;
+  background: var(--warm);
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 16px;
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.item-info { display: grid; min-width: 0; }
+.item-name { font-weight: 500; }
+.item-meta { font-size: 13px; color: var(--text-muted); }
+
+/* כפתורים */
+button { font: inherit; cursor: pointer; }
+button:focus-visible, .search input:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+button:disabled { cursor: default; }
+
+.btn-primary {
+  width: 100%;
+  height: 52px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--white);
+  background: var(--blue);
+  border: 0;
+  border-radius: var(--radius);
+}
+
+.btn-primary:disabled { color: var(--text-muted); background: var(--border); }
 
 .btn-secondary {
-  justify-self: start;
-  font: inherit;
+  flex-shrink: 0;
+  min-width: 80px;
+  height: 40px;
+  padding: 0 16px;
+  font-weight: 500;
   color: var(--blue);
   background: var(--white);
   border: 1.5px solid var(--blue);
-  border-radius: 10px;
-  padding: 8px 14px;
-  cursor: pointer;
+  border-radius: var(--radius);
 }
 
-.btn-secondary:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
-.btn-secondary:disabled { color: var(--text-muted); border-color: var(--border); cursor: default; }
+.btn-secondary:disabled {
+  color: var(--green);
+  border-color: var(--border);
+}
+
+.qty-controls { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.btn-qty {
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--blue);
+  background: var(--white);
+  border: 1.5px solid var(--field-border);
+  border-radius: 10px;
+}
+
+.btn-qty:disabled { color: var(--field-border); border-color: var(--border); }
+
+.qty { min-width: 20px; text-align: center; font-weight: 700; }
+
+.btn-link {
+  padding: 8px 4px;
+  font-size: 13px;
+  color: var(--text-muted);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+}
+
+/* "השווה" דבוק לתחתית המסך */
+.actions {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  gap: 4px;
+  margin-top: 24px;
+  padding: 12px 0 16px;
+  background: var(--cream);
+  box-shadow: 0 -8px 8px -8px rgba(31, 42, 68, 0.12);
+}
