@@ -1,9 +1,12 @@
-// מעבר בין מסכים, ומסך "בניית הסל". מיילסטון 2: מסך אחד.
-import * as basket from "./basket.js?v=2";
+// מעבר בין מסכים: "בניית הסל" ו"פלט תוצאות"
+import * as basket from "./basket.js?v=3";
+import { fetchPrices } from "./prices.js?v=3";
+import { compareBasket, formatPrice } from "./compare.js?v=3";
 
 const $ = (id) => document.getElementById(id);
 
 let products = [];
+let chains = [];
 let byBarcode = new Map();
 let activeCategory = null;
 
@@ -37,7 +40,7 @@ function el(tag, attrs = {}, text) {
 function productInfo(p, withMeta) {
   const info = el("div", { class: "item-info" });
   info.append(el("span", { class: "item-name" }, label(p)));
-  // עד מיילסטון 3 אין יצרנים: מוצגת הקטגוריה
+  // השורה הקטנה: היצרן, ואם אין, הקטגוריה
   if (withMeta) info.append(el("span", { class: "item-meta" }, p.manufacturer || p.category));
   return info;
 }
@@ -125,7 +128,7 @@ function renderBasket() {
   const compare = $("btn-compare");
   compare.disabled = items.length === 0;
   compare.textContent = items.length ? "השווה" : "השווה (סל ריק)";
-  if (!items.length) $("compare-msg").textContent = "";
+  $("btn-clear").disabled = items.length === 0;
 }
 
 function render() {
@@ -165,11 +168,80 @@ function handleClick(event) {
   }
 }
 
+// מציג מסך אחד ומסתיר את השאר
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach((s) => (s.hidden = s.id !== id));
+  window.scrollTo(0, 0);
+}
+
+function statusText(result) {
+  const n = result.missing.length;
+  if (n === 0) return `סל מלא · ${countText(basket.items().length)}`;
+  return n === 1 ? "חסר מוצר אחד" : `חסרים ${n} מוצרים`;
+}
+
+function renderResults(results) {
+  const list = $("results");
+  list.replaceChildren();
+  for (const r of results) {
+    const li = el("li", { class: r.cheapest ? "card result cheapest" : "card result" });
+    const head = el("div", { class: "result-head" });
+    head.append(el("h3", { class: "chain-name" }, r.chain.name));
+    if (r.cheapest) head.append(el("span", { class: "tag tag-cheapest" }, "✓ הזול ביותר"));
+    li.append(
+      head,
+      el("p", { class: "chain-store" }, r.chain.store_name),
+      el("p", { class: "price" }, formatPrice(r.total)),
+      el("p", { class: r.complete ? "result-status" : "result-status partial" }, statusText(r))
+    );
+    list.append(li);
+  }
+}
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
+}
+
+async function compare() {
+  const items = basket.items();
+  if (!items.length) return;
+  showScreen("screen-results");
+  $("results").replaceChildren();
+  $("results-updated").textContent = "";
+  $("results-status").textContent = "מחשבים את עלות הסל...";
+  $("results-title").focus();
+
+  try {
+    const codes = [...new Set(items.flatMap(({ barcode }) => {
+      const p = byBarcode.get(barcode);
+      return [p.barcode, ...Object.values(p.chain_codes || {})];
+    }))];
+    const rows = await fetchPrices(codes, chains.map((c) => c.chain_id));
+    const results = compareBasket(items, byBarcode, chains, rows);
+    renderResults(results);
+    $("results-status").textContent = "";
+    const latest = rows.map((r) => r.loaded_at).sort().pop();
+    if (latest) $("results-updated").textContent = `המחירים עודכנו ב-${formatDate(latest)}`;
+    const best = results.find((r) => r.cheapest);
+    announce(best ? `הזול ביותר: ${best.chain.name}, ${formatPrice(best.total)}` : "התוצאות מוכנות");
+  } catch {
+    $("results-status").textContent = "לא הצלחנו לטעון את המחירים. בדקו את החיבור ונסו שוב.";
+  }
+}
+
+async function loadJson(path) {
+  const res = await fetch(path);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
 async function init() {
   try {
-    const res = await fetch("data/products.json?v=2");
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    products = await res.json();
+    [products, chains] = await Promise.all([
+      loadJson("data/products.json?v=3"),
+      loadJson("data/chains.json?v=3"),
+    ]);
   } catch {
     $("products-status").textContent = "לא הצלחנו לטעון את רשימת המוצרים. נסו לרענן את הדף.";
     return;
@@ -190,9 +262,18 @@ async function init() {
   });
   $("products").addEventListener("click", handleClick);
   $("basket").addEventListener("click", handleClick);
-  $("btn-compare").addEventListener("click", () => {
-    // מסך התוצאות נבנה במיילסטון 3
-    $("compare-msg").textContent = "ההשוואה תגיע בשלב הבא";
+  // מסך החלופות נבנה במיילסטון 5. בינתיים "השווה" מוביל ישר לתוצאות.
+  $("btn-compare").addEventListener("click", compare);
+  $("btn-clear").addEventListener("click", () => {
+    if (!confirm("לנקות את כל הסל?")) return;
+    basket.clear();
+    render();
+    announce("הסל רוקן");
+    $("search").focus();
+  });
+  $("btn-back").addEventListener("click", () => {
+    showScreen("screen-build");
+    $("btn-compare").focus();
   });
 }
 

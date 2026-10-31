@@ -1,0 +1,1046 @@
+{
+  "name": "daily-prices",
+  "nodes": [
+    {
+      "id": "n0",
+      "name": "הרצה ידנית",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "n1",
+      "name": "שופרסל: רשימת קבצים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "url": "https://prices.shufersal.co.il/FileObject/UpdateCategory?catID=2&storeId=1",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "n2",
+      "name": "שופרסל: הקובץ העדכני",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data;\nconst m = html.match(/https:\\/\\/pricesprodpublic[^\"]*PriceFull7290027600007-001-001-[^\"]*/);\nif (!m) throw new Error('לא נמצא קובץ PriceFull לסניף 001 של שופרסל');\nreturn [{ json: { url: m[0].replace(/&amp;/g, '&') } }];"
+      }
+    },
+    {
+      "id": "n3",
+      "name": "שופרסל: הורדה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "n4",
+      "name": "שופרסל: שם קובץ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nitem.binary.data.fileName = 'pricefull.xml.gz';\nitem.binary.data.fileExtension = 'gz';\nitem.binary.data.mimeType = 'application/gzip';\nreturn [item];"
+      }
+    },
+    {
+      "id": "n5",
+      "name": "שופרסל: פריסת gz",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      }
+    },
+    {
+      "id": "n6",
+      "name": "שופרסל: קריאת XML",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_0",
+        "destinationKey": "data",
+        "options": {}
+      }
+    },
+    {
+      "id": "n7",
+      "name": "שופרסל: מיפוי וסינון",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// קורא את קובץ ה-PriceFull, מסנן מוצרים במשקל, ומחלק למנות של 1,000\nconst xml = $input.first().json.data;\nconst loadedAt = new Date().toISOString();\nconst seen = new Set();\nconst rows = [];\nconst re = /<Item>([\\s\\S]*?)<\\/Item>/g;\nlet m;\nwhile ((m = re.exec(xml))) {\n  const s = m[1];\n  const g = (t) => {\n    const r = s.match(new RegExp('<' + t + '>([\\\\s\\\\S]*?)</' + t + '>', 'i'));\n    return r ? r[1].trim() : '';\n  };\n  const code = g('ItemCode');\n  const price = parseFloat(g('ItemPrice'));\n  const weighted = (g('bIsWeighted') || g('blsWeighted')) === '1';\n  if (!code || weighted || !(price > 0) || seen.has(code)) continue;\n  seen.add(code);\n  const updated = g('PriceUpdateTime').replace(' ', 'T');\n  rows.push({\n    chain_id: 'shufersal',\n    item_code: code,\n    item_name: g('ItemName').replace(/\\s+/g, ' '),\n    manufacturer: g('ManufactureName') || null,\n    quantity: parseFloat(g('Quantity')) || null,\n    unit: g('UnitOfMeasure') || g('UnitQty') || null,\n    price,\n    price_updated_at: updated || null,\n    loaded_at: loadedAt,\n  });\n}\nif (rows.length < 100) throw new Error('נמצאו רק ' + rows.length + ' מוצרים בקובץ. לא כותבים כלום.');\nconst batches = [];\nfor (let i = 0; i < rows.length; i += 1000) batches.push({ json: { rows: rows.slice(i, i + 1000) } });\nreturn batches;"
+      }
+    },
+    {
+      "id": "n8",
+      "name": "שופרסל: upsert ל-Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/chain_items?on_conflict=chain_id,item_code",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json.rows) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 200
+            }
+          }
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "id": "n9",
+      "name": "וולט: רשימת תאריכים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "url": "https://wm-gateway.wolt.com/isr-prices/public/v1/index.html",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "n10",
+      "name": "וולט: התאריך האחרון",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data;\nconst m = html.match(/href=\"(\\d{4}-\\d{2}-\\d{2}\\.html)\"/);\nif (!m) throw new Error('לא נמצא דף תאריך בוולט');\nreturn [{ json: { url: 'https://wm-gateway.wolt.com/isr-prices/public/v1/' + m[1] } }];"
+      }
+    },
+    {
+      "id": "n11",
+      "name": "וולט: קבצי התאריך",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "n12",
+      "name": "וולט: הקובץ של הסניף",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data;\nconst links = [...html.matchAll(/href=\"([^\"]*PriceFull7290058249350-000-025-[^\"]*)\"/g)].map((x) => x[1]).sort();\nif (!links.length) throw new Error('לא נמצא קובץ PriceFull לסניף 025 של וולט');\nreturn [{ json: { url: 'https://wm-gateway.wolt.com/isr-prices/public/v1/' + links[links.length - 1] } }];"
+      }
+    },
+    {
+      "id": "n13",
+      "name": "וולט: הורדה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        300
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "n14",
+      "name": "וולט: שם קובץ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nitem.binary.data.fileName = 'pricefull.xml.gz';\nitem.binary.data.fileExtension = 'gz';\nitem.binary.data.mimeType = 'application/gzip';\nreturn [item];"
+      }
+    },
+    {
+      "id": "n15",
+      "name": "וולט: פריסת gz",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        1540,
+        300
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      }
+    },
+    {
+      "id": "n16",
+      "name": "וולט: קריאת XML",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        1760,
+        300
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_0",
+        "destinationKey": "data",
+        "options": {}
+      }
+    },
+    {
+      "id": "n17",
+      "name": "וולט: מיפוי וסינון",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// קורא את קובץ ה-PriceFull, מסנן מוצרים במשקל, ומחלק למנות של 1,000\nconst xml = $input.first().json.data;\nconst loadedAt = new Date().toISOString();\nconst seen = new Set();\nconst rows = [];\nconst re = /<Item>([\\s\\S]*?)<\\/Item>/g;\nlet m;\nwhile ((m = re.exec(xml))) {\n  const s = m[1];\n  const g = (t) => {\n    const r = s.match(new RegExp('<' + t + '>([\\\\s\\\\S]*?)</' + t + '>', 'i'));\n    return r ? r[1].trim() : '';\n  };\n  const code = g('ItemCode');\n  const price = parseFloat(g('ItemPrice'));\n  const weighted = (g('bIsWeighted') || g('blsWeighted')) === '1';\n  if (!code || weighted || !(price > 0) || seen.has(code)) continue;\n  seen.add(code);\n  const updated = g('PriceUpdateTime').replace(' ', 'T');\n  rows.push({\n    chain_id: 'wolt',\n    item_code: code,\n    item_name: g('ItemName').replace(/\\s+/g, ' '),\n    manufacturer: g('ManufactureName') || null,\n    quantity: parseFloat(g('Quantity')) || null,\n    unit: g('UnitOfMeasure') || g('UnitQty') || null,\n    price,\n    price_updated_at: updated || null,\n    loaded_at: loadedAt,\n  });\n}\nif (rows.length < 100) throw new Error('נמצאו רק ' + rows.length + ' מוצרים בקובץ. לא כותבים כלום.');\nconst batches = [];\nfor (let i = 0; i < rows.length; i += 1000) batches.push({ json: { rows: rows.slice(i, i + 1000) } });\nreturn batches;"
+      }
+    },
+    {
+      "id": "n18",
+      "name": "וולט: upsert ל-Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/chain_items?on_conflict=chain_id,item_code",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json.rows) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 200
+            }
+          }
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "id": "n19",
+      "name": "טיב טעם: דף כניסה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        600
+      ],
+      "parameters": {
+        "url": "https://url.publishedprices.co.il/login",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "n20",
+      "name": "טיב טעם: אסימון כניסה",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        600
+      ],
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst token = ((r.data || r.body || \"\").match(/name=\"csrftoken\" content=\"([^\"]+)\"/) || [])[1];\nconst sc = [].concat(r.headers['set-cookie'] || []);\nconst cookie = sc.map((c) => c.split(';')[0]).join('; ');\nif (!token) throw new Error('לא נמצא csrftoken בדף הכניסה');\nreturn [{ json: { token, cookie } }];"
+      }
+    },
+    {
+      "id": "n21",
+      "name": "טיב טעם: כניסה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        600
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://url.publishedprices.co.il/login/user",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "r",
+              "value": ""
+            },
+            {
+              "name": "csrftoken",
+              "value": "={{ $json.token }}"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpCustomAuth": {
+          "id": "TwjSpqR4jVzlqTEz",
+          "name": "Custom Auth account"
+        }
+      }
+    },
+    {
+      "id": "n22",
+      "name": "טיב טעם: עוגיית חיבור",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        600
+      ],
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst prev = $('טיב טעם: אסימון כניסה').first().json.cookie;\nconst sc = [].concat(r.headers['set-cookie'] || []).map((c) => c.split(';')[0]);\nconst jar = {};\nfor (const c of prev.split('; ').concat(sc)) { const [k, ...v] = c.split('='); if (k) jar[k] = v.join('='); }\nconst location = r.headers.location || '';\nif (location.includes('login')) throw new Error('הכניסה ל-Cerberus נכשלה. בדוק את ה-Credential של טיב טעם');\nreturn [{ json: { cookie: Object.entries(jar).map(([k, v]) => k + '=' + v).join('; ') } }];"
+      }
+    },
+    {
+      "id": "n23",
+      "name": "טיב טעם: דף קבצים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        600
+      ],
+      "parameters": {
+        "url": "https://url.publishedprices.co.il/file",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "n24",
+      "name": "טיב טעם: אסימון קבצים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        600
+      ],
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data;\nconst token = (html.match(/name=\"csrftoken\" content=\"([^\"]+)\"/) || [])[1];\nif (!token) throw new Error('לא נמצא csrftoken בדף הקבצים. כנראה שהכניסה נכשלה');\nreturn [{ json: { token, cookie: $('טיב טעם: עוגיית חיבור').first().json.cookie } }];"
+      }
+    },
+    {
+      "id": "n25",
+      "name": "טיב טעם: חיפוש קבצים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        600
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://url.publishedprices.co.il/file/json/dir",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "sSearch",
+              "value": "PriceFull7290873255550-"
+            },
+            {
+              "name": "iDisplayLength",
+              "value": "100000"
+            },
+            {
+              "name": "csrftoken",
+              "value": "={{ $json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n26",
+      "name": "טיב טעם: הקובץ העדכני",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        600
+      ],
+      "parameters": {
+        "jsCode": "const list = ($input.first().json.aaData || []).map((f) => f.fname).filter((n) => /^PriceFull7290873255550-\\d{3}-019-/.test(n)).sort();\nif (!list.length) throw new Error('לא נמצא קובץ מתאים ב-Cerberus');\nreturn [{ json: { url: 'https://url.publishedprices.co.il/file/d/' + list[list.length - 1], cookie: $('טיב טעם: אסימון קבצים').first().json.cookie } }];"
+      }
+    },
+    {
+      "id": "n27",
+      "name": "טיב טעם: הורדה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        600
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "n28",
+      "name": "טיב טעם: שם קובץ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        600
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nitem.binary.data.fileName = 'pricefull.xml.gz';\nitem.binary.data.fileExtension = 'gz';\nitem.binary.data.mimeType = 'application/gzip';\nreturn [item];"
+      }
+    },
+    {
+      "id": "n29",
+      "name": "טיב טעם: פריסת gz",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        2420,
+        600
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      }
+    },
+    {
+      "id": "n30",
+      "name": "טיב טעם: קריאת XML",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        2640,
+        600
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_0",
+        "destinationKey": "data",
+        "options": {}
+      }
+    },
+    {
+      "id": "n31",
+      "name": "טיב טעם: מיפוי וסינון",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        600
+      ],
+      "parameters": {
+        "jsCode": "// קורא את קובץ ה-PriceFull, מסנן מוצרים במשקל, ומחלק למנות של 1,000\nconst xml = $input.first().json.data;\nconst loadedAt = new Date().toISOString();\nconst seen = new Set();\nconst rows = [];\nconst re = /<Item>([\\s\\S]*?)<\\/Item>/g;\nlet m;\nwhile ((m = re.exec(xml))) {\n  const s = m[1];\n  const g = (t) => {\n    const r = s.match(new RegExp('<' + t + '>([\\\\s\\\\S]*?)</' + t + '>', 'i'));\n    return r ? r[1].trim() : '';\n  };\n  const code = g('ItemCode');\n  const price = parseFloat(g('ItemPrice'));\n  const weighted = (g('bIsWeighted') || g('blsWeighted')) === '1';\n  if (!code || weighted || !(price > 0) || seen.has(code)) continue;\n  seen.add(code);\n  const updated = g('PriceUpdateTime').replace(' ', 'T');\n  rows.push({\n    chain_id: 'tiv_taam',\n    item_code: code,\n    item_name: g('ItemName').replace(/\\s+/g, ' '),\n    manufacturer: g('ManufactureName') || null,\n    quantity: parseFloat(g('Quantity')) || null,\n    unit: g('UnitOfMeasure') || g('UnitQty') || null,\n    price,\n    price_updated_at: updated || null,\n    loaded_at: loadedAt,\n  });\n}\nif (rows.length < 100) throw new Error('נמצאו רק ' + rows.length + ' מוצרים בקובץ. לא כותבים כלום.');\nconst batches = [];\nfor (let i = 0; i < rows.length; i += 1000) batches.push({ json: { rows: rows.slice(i, i + 1000) } });\nreturn batches;"
+      }
+    },
+    {
+      "id": "n32",
+      "name": "טיב טעם: upsert ל-Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3080,
+        600
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/chain_items?on_conflict=chain_id,item_code",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json.rows) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 200
+            }
+          }
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "הרצה ידנית": {
+      "main": [
+        [
+          {
+            "node": "שופרסל: רשימת קבצים",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "וולט: רשימת תאריכים",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "טיב טעם: דף כניסה",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל: רשימת קבצים": {
+      "main": [
+        [
+          {
+            "node": "שופרסל: הקובץ העדכני",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל: הקובץ העדכני": {
+      "main": [
+        [
+          {
+            "node": "שופרסל: הורדה",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל: הורדה": {
+      "main": [
+        [
+          {
+            "node": "שופרסל: שם קובץ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל: שם קובץ": {
+      "main": [
+        [
+          {
+            "node": "שופרסל: פריסת gz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל: פריסת gz": {
+      "main": [
+        [
+          {
+            "node": "שופרסל: קריאת XML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל: קריאת XML": {
+      "main": [
+        [
+          {
+            "node": "שופרסל: מיפוי וסינון",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל: מיפוי וסינון": {
+      "main": [
+        [
+          {
+            "node": "שופרסל: upsert ל-Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "וולט: רשימת תאריכים": {
+      "main": [
+        [
+          {
+            "node": "וולט: התאריך האחרון",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "וולט: התאריך האחרון": {
+      "main": [
+        [
+          {
+            "node": "וולט: קבצי התאריך",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "וולט: קבצי התאריך": {
+      "main": [
+        [
+          {
+            "node": "וולט: הקובץ של הסניף",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "וולט: הקובץ של הסניף": {
+      "main": [
+        [
+          {
+            "node": "וולט: הורדה",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "וולט: הורדה": {
+      "main": [
+        [
+          {
+            "node": "וולט: שם קובץ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "וולט: שם קובץ": {
+      "main": [
+        [
+          {
+            "node": "וולט: פריסת gz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "וולט: פריסת gz": {
+      "main": [
+        [
+          {
+            "node": "וולט: קריאת XML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "וולט: קריאת XML": {
+      "main": [
+        [
+          {
+            "node": "וולט: מיפוי וסינון",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "וולט: מיפוי וסינון": {
+      "main": [
+        [
+          {
+            "node": "וולט: upsert ל-Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: דף כניסה": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: אסימון כניסה",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: אסימון כניסה": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: כניסה",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: כניסה": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: עוגיית חיבור",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: עוגיית חיבור": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: דף קבצים",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: דף קבצים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: אסימון קבצים",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: אסימון קבצים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: חיפוש קבצים",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: חיפוש קבצים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: הקובץ העדכני",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: הקובץ העדכני": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: הורדה",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: הורדה": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: שם קובץ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: שם קובץ": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: פריסת gz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: פריסת gz": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: קריאת XML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: קריאת XML": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: מיפוי וסינון",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: מיפוי וסינון": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: upsert ל-Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {}
+}

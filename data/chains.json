@@ -1,1 +1,26 @@
-[]
+[
+  {
+    "chain_id": "shufersal",
+    "name": "שופרסל",
+    "store_id": "001",
+    "store_name": "שלי בן יהודה 79",
+    "city": "תל אביב",
+    "chain_code": "7290027600007"
+  },
+  {
+    "chain_id": "tiv_taam",
+    "name": "טיב טעם",
+    "store_id": "019",
+    "store_name": "רמת החייל, דבורה הנביאה 122",
+    "city": "תל אביב",
+    "chain_code": "7290873255550"
+  },
+  {
+    "chain_id": "wolt",
+    "name": "וולט מרקט",
+    "store_id": "025",
+    "store_name": "בן יהודה 19",
+    "city": "תל אביב",
+    "chain_code": "7290058249350"
+  }
+]

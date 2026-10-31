@@ -61,6 +61,11 @@ export function changeQty(barcode, delta) {
   save();
 }
 
+export function clear() {
+  state.items = [];
+  save();
+}
+
 export function remove(barcode) {
   state.items = state.items.filter((it) => it.barcode !== barcode);
   save();

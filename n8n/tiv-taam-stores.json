@@ -1,0 +1,455 @@
+{
+  "name": "tiv-taam-stores",
+  "nodes": [
+    {
+      "id": "n0",
+      "name": "הרצה ידנית",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "n1",
+      "name": "סניפים: דף כניסה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "url": "https://url.publishedprices.co.il/login",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "n2",
+      "name": "סניפים: אסימון כניסה",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst token = ((r.data || r.body || \"\").match(/name=\"csrftoken\" content=\"([^\"]+)\"/) || [])[1];\nconst sc = [].concat(r.headers['set-cookie'] || []);\nconst cookie = sc.map((c) => c.split(';')[0]).join('; ');\nif (!token) throw new Error('לא נמצא csrftoken בדף הכניסה');\nreturn [{ json: { token, cookie } }];"
+      }
+    },
+    {
+      "id": "n3",
+      "name": "סניפים: כניסה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://url.publishedprices.co.il/login/user",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "r",
+              "value": ""
+            },
+            {
+              "name": "csrftoken",
+              "value": "={{ $json.token }}"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpCustomAuth": {
+          "id": "TwjSpqR4jVzlqTEz",
+          "name": "Custom Auth account"
+        }
+      }
+    },
+    {
+      "id": "n4",
+      "name": "סניפים: עוגיית חיבור",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst prev = $('סניפים: אסימון כניסה').first().json.cookie;\nconst sc = [].concat(r.headers['set-cookie'] || []).map((c) => c.split(';')[0]);\nconst jar = {};\nfor (const c of prev.split('; ').concat(sc)) { const [k, ...v] = c.split('='); if (k) jar[k] = v.join('='); }\nconst location = r.headers.location || '';\nif (location.includes('login')) throw new Error('הכניסה ל-Cerberus נכשלה. בדוק את ה-Credential של טיב טעם');\nreturn [{ json: { cookie: Object.entries(jar).map(([k, v]) => k + '=' + v).join('; ') } }];"
+      }
+    },
+    {
+      "id": "n5",
+      "name": "סניפים: דף קבצים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "url": "https://url.publishedprices.co.il/file",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "n6",
+      "name": "סניפים: אסימון קבצים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data;\nconst token = (html.match(/name=\"csrftoken\" content=\"([^\"]+)\"/) || [])[1];\nif (!token) throw new Error('לא נמצא csrftoken בדף הקבצים. כנראה שהכניסה נכשלה');\nreturn [{ json: { token, cookie: $('סניפים: עוגיית חיבור').first().json.cookie } }];"
+      }
+    },
+    {
+      "id": "n7",
+      "name": "סניפים: חיפוש קבצים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://url.publishedprices.co.il/file/json/dir",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "sSearch",
+              "value": "Stores7290873255550"
+            },
+            {
+              "name": "iDisplayLength",
+              "value": "100000"
+            },
+            {
+              "name": "csrftoken",
+              "value": "={{ $json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n8",
+      "name": "סניפים: הקובץ העדכני",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const list = ($input.first().json.aaData || []).map((f) => f.fname).filter((n) => /^Stores7290873255550/.test(n)).sort();\nif (!list.length) throw new Error('לא נמצא קובץ מתאים ב-Cerberus');\nreturn [{ json: { url: 'https://url.publishedprices.co.il/file/d/' + list[list.length - 1], cookie: $('סניפים: אסימון קבצים').first().json.cookie } }];"
+      }
+    },
+    {
+      "id": "n9",
+      "name": "סניפים: הורדה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        0
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "n10",
+      "name": "סניפים: שם קובץ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nitem.binary.data.fileName = 'pricefull.xml.gz';\nitem.binary.data.fileExtension = 'gz';\nitem.binary.data.mimeType = 'application/gzip';\nreturn [item];"
+      }
+    },
+    {
+      "id": "n11",
+      "name": "סניפים: פריסת gz",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        2420,
+        0
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      }
+    },
+    {
+      "id": "n12",
+      "name": "סניפים: קריאת XML",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        2640,
+        0
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_0",
+        "destinationKey": "data",
+        "options": {}
+      }
+    },
+    {
+      "id": "n13",
+      "name": "סניפים: רשימה",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const xml = $input.first().json.data;\nconst stores = [...xml.matchAll(/<Store>([\\s\\S]*?)<\\/Store>/gi)].map((m) => {\n  const g = (t) => ((m[1].match(new RegExp('<' + t + '>([^<]*)</' + t + '>', 'i')) || [])[1] || '').trim();\n  return { json: { store_id: g('StoreID'), name: g('StoreName'), city: g('City'), address: g('Address') } };\n});\nreturn stores;"
+      }
+    }
+  ],
+  "connections": {
+    "הרצה ידנית": {
+      "main": [
+        [
+          {
+            "node": "סניפים: דף כניסה",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סניפים: דף כניסה": {
+      "main": [
+        [
+          {
+            "node": "סניפים: אסימון כניסה",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סניפים: אסימון כניסה": {
+      "main": [
+        [
+          {
+            "node": "סניפים: כניסה",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סניפים: כניסה": {
+      "main": [
+        [
+          {
+            "node": "סניפים: עוגיית חיבור",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סניפים: עוגיית חיבור": {
+      "main": [
+        [
+          {
+            "node": "סניפים: דף קבצים",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סניפים: דף קבצים": {
+      "main": [
+        [
+          {
+            "node": "סניפים: אסימון קבצים",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סניפים: אסימון קבצים": {
+      "main": [
+        [
+          {
+            "node": "סניפים: חיפוש קבצים",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סניפים: חיפוש קבצים": {
+      "main": [
+        [
+          {
+            "node": "סניפים: הקובץ העדכני",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סניפים: הקובץ העדכני": {
+      "main": [
+        [
+          {
+            "node": "סניפים: הורדה",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סניפים: הורדה": {
+      "main": [
+        [
+          {
+            "node": "סניפים: שם קובץ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סניפים: שם קובץ": {
+      "main": [
+        [
+          {
+            "node": "סניפים: פריסת gz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סניפים: פריסת gz": {
+      "main": [
+        [
+          {
+            "node": "סניפים: קריאת XML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סניפים: קריאת XML": {
+      "main": [
+        [
+          {
+            "node": "סניפים: רשימה",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {}
+}

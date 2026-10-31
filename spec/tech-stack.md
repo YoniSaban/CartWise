@@ -1,6 +1,6 @@
 # TECH STACK: סל חכם
 
-מבוסס על `PRD.md`, `product-10-definitions.md` ו-`course-stack.md`. נכתב ב-20.10.2026, ועודכן ב-24.10.2026 לפי הערות המשתמש.
+מבוסס על `PRD.md`, `product-10-definitions.md` ו-`course-stack.md`. נכתב ב-20.10.2026, ועודכן ב-24.10.2026 לפי הערות המשתמש. ב-31.10.2026 (מיילסטון 3): ויקטורי הוחלפה בוולט מרקט, והעיר היא תל אביב.
 נקודת המוצא היא סטאק הקורס. כל טענה כאן נבדקה ברשת ב-20.10.2026, אלא אם כתוב אחרת.
 
 ## 1. התאמה לסטאק הקורס
@@ -43,8 +43,8 @@
 | רשת | הפורטל | איך נכנסים |
 |:---|:---|:---|
 | שופרסל | [prices.shufersal.co.il](https://prices.shufersal.co.il/) (אישר המשתמש) | עמוד ציבורי עם רשימת קבצים |
-| טיב טעם | Cerberus, url.publishedprices.co.il (לפי מקור צד שלישי, לא נבדק) | כניסה עם שם משתמש של הרשת, ואז הורדה עם עוגייה. שם המשתמש של טיב טעם לא נמצא במקורות. פרטי הכניסה נשמרים רק ב-Credentials של n8n, לא בריפו ולא בקוד |
-| ויקטורי | [laibcatalog.co.il/victory](https://laibcatalog.co.il/victory/index.html) (אישר המשתמש) | עמוד ציבורי. לא נבדק מבפנים, כי האתר לא נגיש מהשרת שבו נכתב המסמך |
+| טיב טעם | Cerberus, url.publishedprices.co.il (לפי הדף הממשלתי) | כניסה עם שם משתמש של הרשת, בלי סיסמה, ואז הורדה עם עוגייה. שם המשתמש מפורסם בדף הממשלתי. פרטי הכניסה נשמרים רק ב-Credentials של n8n, לא בריפו ולא בקוד |
+| וולט מרקט | [wm-gateway.wolt.com/isr-prices](https://wm-gateway.wolt.com/isr-prices/public/v1/index.html) (נבדק 31.10.2026) | עמוד ציבורי בלי כניסה: דף לכל תאריך, ובו קישורים ישירים לקבצים. מפרסם גם בשבת |
 
 הקבצים דחוסים, בפורמט xml.gz. יש קובץ מחירים מלא (PriceFull), קובץ מבצעים וקובץ סניפים.
 
@@ -87,9 +87,9 @@
 ## מקורות
 - [Gemini API pricing, ai.google.dev](https://ai.google.dev/gemini-api/docs/pricing): אילו מודלים חינמיים, ושהתוכן בשכבה החינמית משמש לשיפור המוצרים.
 - [Gemini API pricing changes, agentdeals.dev](https://agentdeals.dev/gemini-api-pricing-changes): דיווחי מפתחים על 20 ו-500 בקשות ביום. מקור צד שלישי, לא רשמי.
-- [il-supermarket-scraper, PyPI](https://pypi.org/project/il-supermarket-scraper/): תמיכה בשופרסל, טיב טעם ויקטורי, והאזהרה על חסימה מחוץ לישראל.
-- [israeli-grocery-price-intelligence, skillselion.com](https://skillselion.com/skills/skills-il/food-and-dining/israeli-grocery-price-intelligence): שלב הכניסה ל-Cerberus, שטיב טעם מפרסמת בו, ושמות הקבצים. מקור צד שלישי, ולא נבדק מול הפורטלים עצמם. הוא טעה לגבי ויקטורי, שמפרסמת ב-LaibCatalog.
-- [הרשות להגנת הצרכן, שקיפות מחירים](https://www.gov.il/he/pages/cpfta_prices_regulations): הדף הממשלתי שמרכז את הקישורים לאתרי הרשתות. לפי המשתמש. לא נגיש מהשרת שבו נכתב המסמך.
-- [LaibCatalog, ויקטורי](https://laibcatalog.co.il/victory/index.html): הפורטל של ויקטורי, לפי המשתמש.
+- [il-supermarket-scraper, PyPI](https://pypi.org/project/il-supermarket-scraper/): תמיכה בשופרסל ובטיב טעם, והאזהרה על חסימה מחוץ לישראל.
+- [israeli-grocery-price-intelligence, skillselion.com](https://skillselion.com/skills/skills-il/food-and-dining/israeli-grocery-price-intelligence): שלב הכניסה ל-Cerberus, שטיב טעם מפרסמת בו, ושמות הקבצים. מקור צד שלישי, ולא נבדק מול הפורטלים עצמם.
+- [הרשות להגנת הצרכן, שקיפות מחירים](https://www.gov.il/he/pages/cpfta_prices_regulations): הדף הממשלתי שמרכז את הקישורים לאתרי הרשתות. לפי המשתמש. נבדק ב-31.10.2026.
+- [וולט מרקט, שקיפות מחירים](https://wm-gateway.wolt.com/isr-prices/public/v1/index.html): הפורטל של וולט, לפי הדף הממשלתי. נבדק ב-31.10.2026.
 - [שופרסל, אתר שקיפות מחירים](https://prices.shufersal.co.il/): הפורטל של שופרסל.
 - [n8n pricing, sliplane.io](https://frontend.sliplane.io/blog/n8n-pricing): אין תוכנית חינמית בענן, ו-Community Edition חינמית לאירוח עצמי.
