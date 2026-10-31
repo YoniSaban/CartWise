@@ -62,3 +62,25 @@
 - **שתי כתובות:** האתר נשאר ב-GitHub Pages. Vercel משמש רק לפונקציה, ולכן `ALLOWED_ORIGIN` הוא `https://yonisaban.github.io`.
 - **n8n Workflow:** לא נכנס לריפו במיילסטון הזה. הייצוא לריפו (`n8n/daily-prices.json`) הוא חלק ממיילסטון 6.
 - **ריצה מקומית:** שרת סטטי פשוט עם `npx http-server`, בלי להתקין כלום בפרויקט.
+
+## אחרי הבנייה (31.10.2026)
+
+### מה נבנה בפועל
+- **Supabase:** פרויקט `CartWise` (ref `myfvbmcmpdxtxubdraaq`), נפתח בדשבורד באזור Stockholm (eu-north-1) ולא בפרנקפורט. הטבלאות נוצרו ב-migration `m1_create_tables`, עם RLS וקריאה בלבד ל-`anon`, וגם הרשאות הכתיבה של `anon` ו-`authenticated` הוסרו.
+- **Vercel:** פרויקט `cartwise`, נפתח בדשבורד. הכתובת: https://cartwise-pied.vercel.app. שש משתני הסביבה הוזנו על ידי יוני.
+- **n8n:** רץ מקומית עם `npx.cmd n8n@latest start` (ב-PowerShell, `npx` רגיל חסום במדיניות הסקריפטים). ה-Workflow `m1-test-row` כותב את השורה ב-upsert דרך ה-REST API של Supabase, עם Credential מסוג Supabase API.
+
+### תנאי ההשלמה
+
+| מס' | תנאי | תוצאה |
+|---:|---|---|
+| 1 | הדף נפתח בטלפון ובמחשב | ✓ נבדק ברוחב 375 ובמחשב |
+| 2 | שורת הבדיקה מ-n8n מוצגת | ✓ "שורת בדיקה מ-n8n · ₪1.00" |
+| 3 | הפונקציה עונה, ומקור אחר נחסם | ✓ בלינק החי "ok". Origin זר מקבל 403 ובלי כותרת CORS. מקומית נחסם |
+| 4 | כתיבה מהדפדפן נכשלת | ✓ HTTP 401, permission denied |
+| 5 | אין מפתח סודי בריפו | ✓ `git grep` על `sb_secret_`, `AIza` ו-`eyJhbGci` לא מחזיר כלום |
+
+### לקחים
+- כשנתקלים במפתחות סודיים, יוני מדביק אותם בעצמו, וכדאי לתת קישור ישיר לעמוד ולציין בדיוק לאיזה שדה הערך הולך.
+- ייבוא Workflow ל-n8n אפשר גם משורת הפקודה: `npx n8n import:workflow --input=<file>`.
+- `builds/milestone-1.zip` נוצר מקומית (התיקייה `builds/` לא עולה לריפו).
