@@ -1,0 +1,77 @@
+:root {
+  --cream: #FDF8F0;
+  --white: #FFFFFF;
+  --blue: #1A4B8A;
+  --blue-dark: #24466A;
+  --green: #1E7A45;
+  --text: #1F2A44;
+  --text-muted: #5B6475;
+  --border: #E3E8EF;
+  --field-border: #CCD5E2;
+  --error: #B42318;
+  --error-bg: #FEECEB;
+  --ok-bg: #E8F4EC;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Rubik", system-ui, sans-serif;
+  background: var(--cream);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.topbar {
+  background: var(--blue-dark);
+  color: var(--white);
+  padding: 14px 16px;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 20px 16px;
+}
+
+h2 { margin: 0 0 4px; font-size: 1.3rem; }
+
+.subtitle { margin: 0 0 20px; color: var(--text-muted); }
+
+.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+
+.check {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: grid;
+  gap: 6px;
+}
+
+.check-name { font-weight: 500; }
+
+.check-result { color: var(--text-muted); overflow-wrap: anywhere; }
+.check-result.ok { color: var(--green); }
+.check-result.fail { color: var(--error); }
+
+.btn-secondary {
+  justify-self: start;
+  font: inherit;
+  color: var(--blue);
+  background: var(--white);
+  border: 1.5px solid var(--blue);
+  border-radius: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.btn-secondary:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.btn-secondary:disabled { color: var(--text-muted); border-color: var(--border); cursor: default; }

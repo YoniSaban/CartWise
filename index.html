@@ -4,9 +4,39 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>סל חכם</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <h1>סל חכם</h1>
-  <p>האתר בבנייה.</p>
+  <header class="topbar">
+    <h1>סל חכם</h1>
+  </header>
+
+  <main>
+    <section id="health" class="screen" aria-labelledby="health-title">
+      <h2 id="health-title">בדיקת חיבורים</h2>
+      <p class="subtitle">שלד ראשוני: בודקים שכל החלקים מחוברים.</p>
+
+      <ul class="checks">
+        <li class="check">
+          <span class="check-name">Supabase</span>
+          <span id="check-supabase" class="check-result" aria-live="polite">בודק...</span>
+        </li>
+        <li class="check">
+          <span class="check-name">הפונקציה ב-Vercel</span>
+          <span id="check-function" class="check-result" aria-live="polite">בודק...</span>
+        </li>
+        <li class="check">
+          <span class="check-name">כתיבה מהדפדפן</span>
+          <span id="check-write" class="check-result" aria-live="polite">לא נבדק עדיין</span>
+          <button id="btn-write" type="button" class="btn-secondary">נסה לכתוב ל-Supabase</button>
+        </li>
+      </ul>
+    </section>
+  </main>
+
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>
