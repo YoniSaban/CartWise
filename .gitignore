@@ -1,0 +1,22 @@
+# סודות
+.env
+.env.*
+!.env.example
+
+# תלויות
+node_modules/
+
+# קבצי build של מיילסטונים (נשמרים מקומית בלבד)
+builds/
+
+# חומרי עבודה ישנים, לא עולים לריפו הציבורי
+מסמכים ישנים/
+שבעת ההיבטים/
+Design system 2/
+סל מוצרים/
+
+# מערכת
+.DS_Store
+Thumbs.db
+desktop.ini
+.vercel
