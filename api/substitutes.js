@@ -144,6 +144,14 @@ const RESPONSE_SCHEMA = {
 
 class QuotaError extends Error {}
 
+// כל דור של המודל מכבה את שלב החשיבה אחרת. Flash-Lite חושב מעט ממילא, ולכן בלי הגדרה.
+function thinkingConfig(model) {
+  if (model.includes("flash-lite")) return {};
+  if (model.includes("2.5")) return { thinkingConfig: { thinkingBudget: 0 } };
+  if (model.includes("3.6-flash")) return { thinkingConfig: { thinkingLevel: "minimal" } };
+  return { thinkingConfig: { thinkingLevel: "low" } };
+}
+
 async function callGemini(model, input) {
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
@@ -159,7 +167,7 @@ async function callGemini(model, input) {
           responseMimeType: "application/json",
           responseSchema: RESPONSE_SCHEMA,
           // בלי שלב "חשיבה": הבחירה מתוך רשימה קצרה לא צריכה אותו, והוא מאט מאוד
-          ...(model.includes("2.5") && { thinkingConfig: { thinkingBudget: 0 } }),
+          ...thinkingConfig(model),
         },
       }),
     }
