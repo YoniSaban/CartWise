@@ -287,8 +287,10 @@ export default async function handler(req, res) {
         for (const { model, ...r } of solved) results.push({ ...r, cached: false });
       } catch (err) {
         console.error("batch failed:", err.message);
+        // קוד שגיאה קצר שלנו (למשל "Gemini 404"), בלי ההודעה הגולמית של הספק
+        const code = /^(Gemini|Supabase) \d+$/.test(err.message) ? err.message : err instanceof QuotaError ? "quota" : "parse";
         for (const j of batch) {
-          results.push({ chain_id: j.chain_id, barcode: j.barcode, suggested_item_code: null, reason: null, cached: false, error: true });
+          results.push({ chain_id: j.chain_id, barcode: j.barcode, suggested_item_code: null, reason: null, cached: false, error: code });
         }
       }
     }
