@@ -35,12 +35,12 @@ function setCors(req, res) {
 }
 
 // קריאה ל-Supabase עם המפתח הסודי. רק כאן, בצד השרת.
+// מפתח מהסוג החדש (sb_secret_) נשלח רק בכותרת apikey, לא כ-Bearer.
 async function supabase(path, options = {}) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...options,
     headers: {
       apikey: SUPABASE_SECRET_KEY,
-      Authorization: `Bearer ${SUPABASE_SECRET_KEY}`,
       "Content-Type": "application/json",
       ...options.headers,
     },
@@ -263,8 +263,13 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "בקשה לא תקינה" });
   }
 
+  const started = Date.now();
+  const timing = {};
+  const mark = (name) => (timing[name] = Date.now() - started);
+
   try {
     const cache = await readCache(pairs);
+    mark("cache");
     const results = [];
     const jobs = [];
     for (const p of pairs) {
@@ -277,13 +282,16 @@ export default async function handler(req, res) {
     }
 
     await Promise.all(jobs.map(async (job) => (job.candidates = await findCandidates(job.chain_id, job.product))));
+    mark("candidates");
 
     // מנה שנכשלה לא נשמרת, כדי שאפשר יהיה לנסות שוב. המוצרים בה חוזרים בלי חלופה.
     for (let i = 0; i < jobs.length; i += BATCH_SIZE) {
       const batch = jobs.slice(i, i + BATCH_SIZE);
       try {
         const solved = await solveBatch(batch);
+        mark(`model${i}`);
         await saveCache(solved);
+        mark(`save${i}`);
         for (const { model, ...r } of solved) results.push({ ...r, cached: false });
       } catch (err) {
         console.error("batch failed:", err.message);
@@ -295,7 +303,8 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ results });
+    mark("total");
+    return res.status(200).json({ results, timing });
   } catch (err) {
     console.error("substitutes failed:", err.message);
     return res.status(500).json({ error: "לא הצלחנו לבדוק חלופות כרגע" });
