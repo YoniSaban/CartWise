@@ -249,7 +249,10 @@ h1:focus { outline: none; }
 
 .card.result { display: grid; gap: 2px; align-items: start; padding: 16px; }
 
-.result-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.result-head { display: flex; align-items: center; gap: 8px; }
+
+/* התגיות בצד השני של השורה, יחד */
+.result-head .tag:first-of-type { margin-inline-start: auto; }
 
 .chain-name { margin: 0; font-size: 16px; font-weight: 700; }
 
@@ -302,3 +305,44 @@ h1:focus { outline: none; }
   background: var(--cream);
   box-shadow: 0 -8px 8px -8px rgba(31, 42, 68, 0.12);
 }
+
+/* המלצת חלופות: כרטיס לכל מוצר שחסר ברשת */
+.subs { margin-top: 8px; }
+
+.card.sub { display: grid; gap: 2px; align-items: start; padding: 16px; }
+
+.sub-missing, .sub-reason { margin: 0; font-size: 13px; color: var(--text-muted); }
+
+.sub-offer { margin: 4px 0 0; font-weight: 700; }
+
+.sub-none { margin: 4px 0 0; font-size: 14px; color: var(--error); }
+
+.sub-actions { display: flex; gap: 8px; margin-top: 8px; }
+
+.btn-approve, .btn-reject {
+  flex: 1;
+  height: 44px;
+  font-weight: 500;
+  border-radius: var(--radius);
+}
+
+.btn-approve { color: var(--white); background: var(--green); border: 1.5px solid var(--green); }
+
+.btn-reject { color: var(--text-muted); background: var(--white); border: 1.5px solid var(--field-border); }
+
+/* ההחלטה שנבחרה מודגשת, והשנייה נחלשת */
+.btn-approve[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--white); }
+.btn-reject[aria-pressed="true"] { color: var(--text); border-color: var(--text-muted); background: var(--border); }
+.sub-actions:has([aria-pressed="true"]) [aria-pressed="false"] { opacity: 0.6; }
+
+.sub-state { margin: 4px 0 0; font-size: 13px; color: var(--text-muted); }
+.sub-state.approved { color: var(--green); font-weight: 500; }
+.sub-state:empty { display: none; }
+
+#subs-note { margin-top: 16px; }
+
+.actions .btn-link { justify-self: center; }
+
+.tag-sub { color: var(--blue); background: #EEF3FA; }
+
+.tag-missing { color: var(--error); background: #FEECEB; }

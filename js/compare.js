@@ -11,11 +11,13 @@ function toAgorot(price) {
 }
 
 // items: [{ barcode, qty }], products: Map ברקוד -> מוצר, chains: מ-chains.json, rows: מ-Supabase
+// approved: Map "chain:barcode" -> { item_code, item_name, price }, חלופות שהמשתמש אישר
 // מחזיר { results, notFound }:
 // - notFound: ברקודים שלא נמצאו באף רשת. הם לא נכנסים לאף סכום ולא לספירת החסרים.
 // - results: לכל רשת הסכום והמוצרים החסרים בה. רשת שחסר בה מוצר היא חלקית.
+//   חלופה שאושרה נכנסת לסכום במחיר שלה כפול הכמות, והמוצר לא נספר כחסר (substituted).
 //   "הזול ביותר" רק בין רשתות שהסל מלא בהן. אם אין כזו, אף רשת לא מקבלת אותה.
-export function compareBasket(items, products, chains, rows) {
+export function compareBasket(items, products, chains, rows, approved = new Map()) {
   const priceOf = new Map(rows.map((r) => [`${r.chain_id}:${r.item_code}`, r.price]));
   const price = (chain, barcode) => priceOf.get(`${chain.chain_id}:${codeIn(chain.chain_id, products.get(barcode))}`);
 
@@ -28,12 +30,17 @@ export function compareBasket(items, products, chains, rows) {
   const results = chains.map((chain) => {
     let total = 0;
     const missing = [];
+    const substituted = [];
     for (const { barcode, qty } of counted) {
       const p = price(chain, barcode);
-      if (p == null) missing.push(barcode);
-      else total += toAgorot(p) * qty;
+      const sub = approved.get(`${chain.chain_id}:${barcode}`);
+      if (p != null) total += toAgorot(p) * qty;
+      else if (sub) {
+        total += toAgorot(sub.price) * qty;
+        substituted.push({ barcode, item: sub });
+      } else missing.push(barcode);
     }
-    return { chain, total, missing, complete: missing.length === 0, cheapest: false };
+    return { chain, total, missing, substituted, complete: missing.length === 0, cheapest: false };
   });
 
   const complete = results.filter((r) => r.complete);

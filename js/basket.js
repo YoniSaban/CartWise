@@ -70,3 +70,13 @@ export function remove(barcode) {
   state.items = state.items.filter((it) => it.barcode !== barcode);
   save();
 }
+
+// החלטות על חלופות, לכל רשת ומוצר: "approved" או "rejected". בלי החלטה: לא אושרה.
+export function decision(chainId, barcode) {
+  return state.decisions[`${chainId}:${barcode}`] ?? null;
+}
+
+export function decide(chainId, barcode, value) {
+  state.decisions[`${chainId}:${barcode}`] = value;
+  save();
+}

@@ -1,7 +1,8 @@
-// מעבר בין מסכים: "בניית הסל" ו"פלט תוצאות"
-import * as basket from "./basket.js?v=4";
-import { fetchPrices } from "./prices.js?v=4";
-import { compareBasket, formatPrice } from "./compare.js?v=4";
+// מעבר בין מסכים: "בניית הסל", "המלצת חלופות" ו"פלט תוצאות"
+import * as basket from "./basket.js?v=5";
+import { fetchPrices } from "./prices.js?v=5";
+import { compareBasket, formatPrice } from "./compare.js?v=5";
+import { findSubstitutes } from "./substitutes.js?v=5";
 
 const $ = (id) => document.getElementById(id);
 
@@ -9,6 +10,11 @@ let products = [];
 let chains = [];
 let byBarcode = new Map();
 let activeCategory = null;
+
+// ההשוואה האחרונה: הסל, המחירים מ-Supabase, וההצעות לחלופות ("chain:barcode" -> הצעה)
+let lastItems = [];
+let lastRows = [];
+let suggestions = new Map();
 
 // החיפוש מתעלם מגרשיים, ממרכאות ומרווחים מיותרים: קוטג' = קוטג
 function normalize(text) {
@@ -177,7 +183,9 @@ function showScreen(id) {
 // counted: מספר המוצרים שנכנסו לחישוב, בלי אלה שלא נמצאו באף רשת
 function statusText(result, counted) {
   const n = result.missing.length;
-  if (n === 0) return `סל מלא · ${countText(counted)}`;
+  const s = result.substituted.length;
+  if (n === 0 && s === 0) return `סל מלא · ${countText(counted)}`;
+  if (n === 0) return s === 1 ? "סל מלא · חלופה אחת אושרה" : `סל מלא · ${s} חלופות אושרו`;
   return n === 1 ? "חלקי, חסר מוצר אחד" : `חלקי, חסרים ${n} מוצרים`;
 }
 
@@ -193,6 +201,7 @@ function renderResults({ results, notFound }, counted) {
     const head = el("div", { class: "result-head" });
     head.append(el("h3", { class: "chain-name" }, r.chain.name));
     if (r.cheapest) head.append(el("span", { class: "tag tag-cheapest" }, "✓ הזול ביותר"));
+    if (r.substituted.length) head.append(el("span", { class: "tag tag-sub" }, "⇄ חלופה"));
     if (!r.complete) head.append(el("span", { class: "tag tag-partial" }, "חלקי"));
     li.append(
       head,
@@ -200,6 +209,9 @@ function renderResults({ results, notFound }, counted) {
       el("p", { class: "price" }, formatPrice(r.total)),
       el("p", { class: r.complete ? "result-status" : "result-status partial" }, statusText(r, counted))
     );
+    for (const { barcode, item } of r.substituted) {
+      li.append(el("p", { class: "result-missing" }, `⇄ חלופה: ${item.item_name} במקום ${byBarcode.get(barcode).name}`));
+    }
     if (!r.complete) li.append(el("p", { class: "result-missing" }, `חסר ברשת: ${productNames(r.missing)}`));
     list.append(li);
   }
@@ -224,6 +236,92 @@ function formatDate(iso) {
   return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
 }
 
+// חלופות שהמשתמש אישר, ושיש להן מחיר ברשת
+function approvedSubstitutes() {
+  const approved = new Map();
+  for (const [k, s] of suggestions) {
+    if (s.item && basket.decision(s.chain_id, s.barcode) === "approved") approved.set(k, s.item);
+  }
+  return approved;
+}
+
+function showResults() {
+  showScreen("screen-results");
+  $("results-status").textContent = "";
+  $("results-title").focus();
+
+  const comparison = compareBasket(lastItems, byBarcode, chains, lastRows, approvedSubstitutes());
+  const { results, notFound } = comparison;
+  renderResults(comparison, lastItems.length - notFound.length);
+  $("not-found-section").hidden = false;
+  const latest = lastRows.map((r) => r.loaded_at).sort().pop();
+  $("results-updated").textContent = latest ? `המחירים עודכנו ב-${formatDate(latest)}` : "";
+  const best = results.find((r) => r.cheapest);
+  const lost = !notFound.length ? ""
+    : notFound.length === 1 ? ". מוצר אחד לא נמצא באף רשת" : `. ${notFound.length} מוצרים לא נמצאו באף רשת`;
+  if (best) announce(`הזול ביותר: ${best.chain.name}, ${formatPrice(best.total)}${lost}`);
+  else if (notFound.length < lastItems.length) announce(`התוצאות מוכנות. אין רשת עם סל מלא${lost}`);
+  else announce("אף מוצר בסל לא נמצא ברשתות");
+}
+
+function decisionText(value) {
+  if (value === "approved") return "החלופה אושרה";
+  if (value === "rejected") return "החלופה נדחתה";
+  return "";
+}
+
+// כרטיס לכל מוצר שחסר ברשת: עם חלופה, "✓ אשר" ו"דחה". בלי חלופה, "חסר ברשת" בלי כפתורים.
+function renderSubs(pairs) {
+  const list = $("subs");
+  list.replaceChildren();
+  for (const { chain, barcode } of pairs) {
+    const s = suggestions.get(`${chain.chain_id}:${barcode}`);
+    const p = byBarcode.get(barcode);
+    const li = el("li", { class: "card sub" });
+    const head = el("div", { class: "result-head" });
+    head.append(el("h3", { class: "chain-name" }, chain.name));
+    head.append(s?.item
+      ? el("span", { class: "tag tag-sub" }, "⇄ חלופה")
+      : el("span", { class: "tag tag-missing" }, "חסר ברשת"));
+    li.append(head, el("p", { class: "sub-missing" }, `חסר ברשת: ${label(p)}`));
+
+    if (!s?.item) {
+      li.append(el("p", { class: "sub-none" }, s?.error ? "לא הצלחנו לבדוק חלופה כרגע" : "לא נמצאה חלופה מתאימה ברשת"));
+      list.append(li);
+      continue;
+    }
+
+    const value = basket.decision(chain.chain_id, barcode);
+    li.append(el("p", { class: "sub-offer" }, `חלופה מוצעת: ${s.item.item_name}`));
+    if (s.reason) li.append(el("p", { class: "sub-reason" }, s.reason));
+    const buttons = el("div", { class: "sub-actions" });
+    buttons.append(
+      el("button", { type: "button", class: "btn-approve", "data-sub": "approved", "data-chain": chain.chain_id,
+        "data-barcode": barcode, "aria-pressed": String(value === "approved"),
+        "aria-label": `אשר ${s.item.item_name} במקום ${p.name} ב${chain.name}` }, "✓ אשר"),
+      el("button", { type: "button", class: "btn-reject", "data-sub": "rejected", "data-chain": chain.chain_id,
+        "data-barcode": barcode, "aria-pressed": String(value === "rejected"),
+        "aria-label": `דחה את החלופה ל${p.name} ב${chain.name}` }, "דחה")
+    );
+    li.append(buttons);
+    const state = decisionText(value);
+    li.append(el("p", { class: value === "approved" ? "sub-state approved" : "sub-state" }, state));
+    list.append(li);
+  }
+}
+
+let subsPairs = [];
+
+function handleDecision(event) {
+  const btn = event.target.closest("button[data-sub]");
+  if (!btn) return;
+  const { sub, chain, barcode } = btn.dataset;
+  basket.decide(chain, barcode, sub);
+  renderSubs(subsPairs);
+  document.querySelector(`[data-sub="${sub}"][data-chain="${chain}"][data-barcode="${barcode}"]`)?.focus();
+  announce(decisionText(sub));
+}
+
 async function compare() {
   const items = basket.items();
   if (!items.length) return;
@@ -239,23 +337,37 @@ async function compare() {
       const p = byBarcode.get(barcode);
       return [p.barcode, ...Object.values(p.chain_codes || {})];
     }))];
-    const rows = await fetchPrices(codes, chains.map((c) => c.chain_id));
-    const comparison = compareBasket(items, byBarcode, chains, rows);
-    const { results, notFound } = comparison;
-    renderResults(comparison, items.length - notFound.length);
-    $("results-status").textContent = "";
-    $("not-found-section").hidden = false;
-    const latest = rows.map((r) => r.loaded_at).sort().pop();
-    if (latest) $("results-updated").textContent = `המחירים עודכנו ב-${formatDate(latest)}`;
-    const best = results.find((r) => r.cheapest);
-    const lost = !notFound.length ? ""
-      : notFound.length === 1 ? ". מוצר אחד לא נמצא באף רשת" : `. ${notFound.length} מוצרים לא נמצאו באף רשת`;
-    if (best) announce(`הזול ביותר: ${best.chain.name}, ${formatPrice(best.total)}${lost}`);
-    else if (notFound.length < items.length) announce(`התוצאות מוכנות. אין רשת עם סל מלא${lost}`);
-    else announce("אף מוצר בסל לא נמצא ברשתות");
+    lastRows = await fetchPrices(codes, chains.map((c) => c.chain_id));
+    lastItems = items;
   } catch {
     $("results-status").textContent = "לא הצלחנו לטעון את המחירים. בדקו את החיבור ונסו שוב.";
+    return;
   }
+
+  // מוצר שחסר ברשת אחת לפחות (ולא בכולן) מוביל למסך החלופות. אחרת ישר לתוצאות.
+  const { results } = compareBasket(lastItems, byBarcode, chains, lastRows);
+  subsPairs = results.flatMap((r) => r.missing.map((barcode) => ({ chain: r.chain, barcode })));
+  suggestions = new Map();
+  if (!subsPairs.length) {
+    showResults();
+    return;
+  }
+
+  showScreen("screen-subs");
+  $("subs").replaceChildren();
+  $("btn-to-results").disabled = true;
+  $("subs-status").textContent = "מחפשים חלופות ברשתות...";
+  $("subs-title").focus();
+  try {
+    suggestions = await findSubstitutes(subsPairs.map(({ chain, barcode }) => ({ chain_id: chain.chain_id, barcode })));
+    $("subs-status").textContent = "";
+  } catch {
+    $("subs-status").textContent = "לא הצלחנו לבדוק חלופות כרגע. אפשר להמשיך לתוצאות עם סל חלקי.";
+  }
+  renderSubs(subsPairs);
+  $("btn-to-results").disabled = false;
+  const offered = [...suggestions.values()].filter((s) => s.item).length;
+  announce(offered ? `נמצאו ${offered === 1 ? "חלופה אחת" : `${offered} חלופות`}. אשרו או דחו כל חלופה` : "לא נמצאו חלופות");
 }
 
 async function loadJson(path) {
@@ -267,8 +379,8 @@ async function loadJson(path) {
 async function init() {
   try {
     [products, chains] = await Promise.all([
-      loadJson("data/products.json?v=4"),
-      loadJson("data/chains.json?v=4"),
+      loadJson("data/products.json?v=5"),
+      loadJson("data/chains.json?v=5"),
     ]);
   } catch {
     $("products-status").textContent = "לא הצלחנו לטעון את רשימת המוצרים. נסו לרענן את הדף.";
@@ -290,8 +402,13 @@ async function init() {
   });
   $("products").addEventListener("click", handleClick);
   $("basket").addEventListener("click", handleClick);
-  // מסך החלופות נבנה במיילסטון 5. בינתיים "השווה" מוביל ישר לתוצאות.
   $("btn-compare").addEventListener("click", compare);
+  $("subs").addEventListener("click", handleDecision);
+  $("btn-to-results").addEventListener("click", showResults);
+  $("btn-subs-back").addEventListener("click", () => {
+    showScreen("screen-build");
+    $("btn-compare").focus();
+  });
   $("btn-clear").addEventListener("click", () => {
     if (!confirm("לנקות את כל הסל?")) return;
     basket.clear();
