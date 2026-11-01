@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=3">
+  <link rel="stylesheet" href="css/style.css?v=4">
 </head>
 <body>
   <header class="topbar">
@@ -59,6 +59,11 @@
       <p id="results-status" class="note" aria-live="polite"></p>
       <ul id="results" class="list results"></ul>
 
+      <section id="not-found-section" class="not-found" aria-labelledby="not-found-title" hidden>
+        <h2 id="not-found-title">מוצרים שלא נמצאו באף רשת</h2>
+        <div id="not-found"></div>
+      </section>
+
       <p id="results-updated" class="note"></p>
       <p class="note">מחירי מדף, לא כולל מבצעים</p>
 
@@ -70,6 +75,6 @@
 
   <p id="announcer" class="visually-hidden" aria-live="polite"></p>
 
-  <script type="module" src="js/app.js?v=3"></script>
+  <script type="module" src="js/app.js?v=4"></script>
 </body>
 </html>

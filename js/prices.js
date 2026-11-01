@@ -1,5 +1,5 @@
 // קריאת מחירים מ-Supabase דרך ה-REST API, עם המפתח הציבורי (קריאה בלבד)
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./config.js?v=3";
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./config.js?v=4";
 
 // מחזיר את כל השורות של ברקודי הסל, בכל הרשתות: [{ chain_id, item_code, price, loaded_at }]
 export async function fetchPrices(barcodes, chainIds) {

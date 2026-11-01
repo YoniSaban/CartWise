@@ -1,7 +1,7 @@
 // מעבר בין מסכים: "בניית הסל" ו"פלט תוצאות"
-import * as basket from "./basket.js?v=3";
-import { fetchPrices } from "./prices.js?v=3";
-import { compareBasket, formatPrice } from "./compare.js?v=3";
+import * as basket from "./basket.js?v=4";
+import { fetchPrices } from "./prices.js?v=4";
+import { compareBasket, formatPrice } from "./compare.js?v=4";
 
 const $ = (id) => document.getElementById(id);
 
@@ -174,13 +174,18 @@ function showScreen(id) {
   window.scrollTo(0, 0);
 }
 
-function statusText(result) {
+// counted: מספר המוצרים שנכנסו לחישוב, בלי אלה שלא נמצאו באף רשת
+function statusText(result, counted) {
   const n = result.missing.length;
-  if (n === 0) return `סל מלא · ${countText(basket.items().length)}`;
-  return n === 1 ? "חסר מוצר אחד" : `חסרים ${n} מוצרים`;
+  if (n === 0) return `סל מלא · ${countText(counted)}`;
+  return n === 1 ? "חלקי, חסר מוצר אחד" : `חלקי, חסרים ${n} מוצרים`;
 }
 
-function renderResults(results) {
+function productNames(barcodes) {
+  return barcodes.map((b) => byBarcode.get(b).name).join(", ");
+}
+
+function renderResults({ results, notFound }, counted) {
   const list = $("results");
   list.replaceChildren();
   for (const r of results) {
@@ -188,14 +193,30 @@ function renderResults(results) {
     const head = el("div", { class: "result-head" });
     head.append(el("h3", { class: "chain-name" }, r.chain.name));
     if (r.cheapest) head.append(el("span", { class: "tag tag-cheapest" }, "✓ הזול ביותר"));
+    if (!r.complete) head.append(el("span", { class: "tag tag-partial" }, "חלקי"));
     li.append(
       head,
       el("p", { class: "chain-store" }, r.chain.store_name),
       el("p", { class: "price" }, formatPrice(r.total)),
-      el("p", { class: r.complete ? "result-status" : "result-status partial" }, statusText(r))
+      el("p", { class: r.complete ? "result-status" : "result-status partial" }, statusText(r, counted))
     );
+    if (!r.complete) li.append(el("p", { class: "result-missing" }, `חסר ברשת: ${productNames(r.missing)}`));
     list.append(li);
   }
+
+  const box = $("not-found");
+  box.replaceChildren();
+  if (!notFound.length) {
+    box.append(el("p", { class: "note" }, "אין מוצרים כאלה בסל הזה"));
+    return;
+  }
+  box.append(el("p", { class: "note" }, "המוצרים האלה לא נכנסו לאף סכום:"));
+  const ul = el("ul", { class: "not-found-list" });
+  for (const b of notFound) {
+    const p = byBarcode.get(b);
+    ul.append(el("li", {}, label(p)));
+  }
+  box.append(ul);
 }
 
 function formatDate(iso) {
@@ -208,6 +229,7 @@ async function compare() {
   if (!items.length) return;
   showScreen("screen-results");
   $("results").replaceChildren();
+  $("not-found-section").hidden = true;
   $("results-updated").textContent = "";
   $("results-status").textContent = "מחשבים את עלות הסל...";
   $("results-title").focus();
@@ -218,13 +240,19 @@ async function compare() {
       return [p.barcode, ...Object.values(p.chain_codes || {})];
     }))];
     const rows = await fetchPrices(codes, chains.map((c) => c.chain_id));
-    const results = compareBasket(items, byBarcode, chains, rows);
-    renderResults(results);
+    const comparison = compareBasket(items, byBarcode, chains, rows);
+    const { results, notFound } = comparison;
+    renderResults(comparison, items.length - notFound.length);
     $("results-status").textContent = "";
+    $("not-found-section").hidden = false;
     const latest = rows.map((r) => r.loaded_at).sort().pop();
     if (latest) $("results-updated").textContent = `המחירים עודכנו ב-${formatDate(latest)}`;
     const best = results.find((r) => r.cheapest);
-    announce(best ? `הזול ביותר: ${best.chain.name}, ${formatPrice(best.total)}` : "התוצאות מוכנות");
+    const lost = !notFound.length ? ""
+      : notFound.length === 1 ? ". מוצר אחד לא נמצא באף רשת" : `. ${notFound.length} מוצרים לא נמצאו באף רשת`;
+    if (best) announce(`הזול ביותר: ${best.chain.name}, ${formatPrice(best.total)}${lost}`);
+    else if (notFound.length < items.length) announce(`התוצאות מוכנות. אין רשת עם סל מלא${lost}`);
+    else announce("אף מוצר בסל לא נמצא ברשתות");
   } catch {
     $("results-status").textContent = "לא הצלחנו לטעון את המחירים. בדקו את החיבור ונסו שוב.";
   }
@@ -239,8 +267,8 @@ async function loadJson(path) {
 async function init() {
   try {
     [products, chains] = await Promise.all([
-      loadJson("data/products.json?v=3"),
-      loadJson("data/chains.json?v=3"),
+      loadJson("data/products.json?v=4"),
+      loadJson("data/chains.json?v=4"),
     ]);
   } catch {
     $("products-status").textContent = "לא הצלחנו לטעון את רשימת המוצרים. נסו לרענן את הדף.";
