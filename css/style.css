@@ -81,7 +81,7 @@ h2 { margin: 24px 0 8px; font-size: 16px; font-weight: 700; }
   background: var(--white);
   border: 1.5px solid var(--field-border);
   border-radius: var(--radius);
-  padding: 0 36px 0 4px;
+  padding: 0 36px 0 44px;
 }
 
 .search input::placeholder { color: var(--text-muted); }
@@ -346,3 +346,22 @@ h1:focus { outline: none; }
 .tag-sub { color: var(--blue); background: #EEF3FA; }
 
 .tag-missing { color: var(--error); background: #FEECEB; }
+
+/* כפתור X לניקוי החיפוש, בצד שמאל של השדה. ה-X המובנה של הדפדפן מוסתר, כדי שלא יהיו שניים */
+.search input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+
+.search-clear {
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  width: 40px;
+  height: 40px;
+  transform: translateY(-50%);
+  font-size: 16px;
+  color: var(--text-muted);
+  background: none;
+  border: 0;
+  border-radius: 50%;
+}
+
+.search-clear[hidden] { display: none; }

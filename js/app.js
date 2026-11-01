@@ -1,8 +1,8 @@
 // מעבר בין מסכים: "בניית הסל", "המלצת חלופות" ו"פלט תוצאות"
-import * as basket from "./basket.js?v=5";
-import { fetchPrices } from "./prices.js?v=5";
-import { compareBasket, formatPrice } from "./compare.js?v=5";
-import { findSubstitutes } from "./substitutes.js?v=5";
+import * as basket from "./basket.js?v=6";
+import { fetchPrices } from "./prices.js?v=6";
+import { compareBasket, formatPrice } from "./compare.js?v=6";
+import { findSubstitutes } from "./substitutes.js?v=6";
 
 const $ = (id) => document.getElementById(id);
 
@@ -98,6 +98,7 @@ function renderCategories() {
     btn.addEventListener("click", () => {
       activeCategory = pressed ? null : category;
       $("search").value = "";
+      $("search-clear").hidden = true;
       renderCategories();
       renderProducts();
       document.querySelectorAll(".chip")[i].focus();
@@ -379,8 +380,8 @@ async function loadJson(path) {
 async function init() {
   try {
     [products, chains] = await Promise.all([
-      loadJson("data/products.json?v=5"),
-      loadJson("data/chains.json?v=5"),
+      loadJson("data/products.json?v=6"),
+      loadJson("data/chains.json?v=6"),
     ]);
   } catch {
     $("products-status").textContent = "לא הצלחנו לטעון את רשימת המוצרים. נסו לרענן את הדף.";
@@ -398,7 +399,15 @@ async function init() {
       activeCategory = null;
       renderCategories();
     }
+    $("search-clear").hidden = !$("search").value;
     renderProducts();
+  });
+  // ה-X של הדפדפן לא מופיע בכל טלפון, ולכן כפתור משלנו
+  $("search-clear").addEventListener("click", () => {
+    $("search").value = "";
+    $("search-clear").hidden = true;
+    renderProducts();
+    $("search").focus();
   });
   $("products").addEventListener("click", handleClick);
   $("basket").addEventListener("click", handleClick);
