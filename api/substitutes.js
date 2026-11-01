@@ -18,6 +18,8 @@ const MAX_PAIRS = 67;
 const MAX_CANDIDATES = 30;
 const BATCH_SIZE = 10;
 const MAX_REASON = 120;
+// תשובה איטית מהמודל נחשבת כשל, כדי שהמשתמש לא יחכה דקות
+const GEMINI_TIMEOUT_MS = 30000;
 
 const byBarcode = new Map(products.map((p) => [p.barcode, p]));
 const chainIds = new Set(chains.map((c) => c.chain_id));
@@ -148,6 +150,7 @@ async function callGemini(model, input) {
     {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
+      signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: PROMPT }] },
         contents: [{ role: "user", parts: [{ text: JSON.stringify(input) }] }],
@@ -155,6 +158,8 @@ async function callGemini(model, input) {
           temperature: 0,
           responseMimeType: "application/json",
           responseSchema: RESPONSE_SCHEMA,
+          // בלי שלב "חשיבה": הבחירה מתוך רשימה קצרה לא צריכה אותו, והוא מאט מאוד
+          ...(model.includes("2.5") && { thinkingConfig: { thinkingBudget: 0 } }),
         },
       }),
     }
@@ -296,7 +301,8 @@ export default async function handler(req, res) {
       } catch (err) {
         console.error("batch failed:", err.message);
         // קוד שגיאה קצר שלנו (למשל "Gemini 404"), בלי ההודעה הגולמית של הספק
-        const code = /^(Gemini|Supabase) \d+$/.test(err.message) ? err.message : err instanceof QuotaError ? "quota" : "parse";
+        const code = /^(Gemini|Supabase) \d+$/.test(err.message) ? err.message
+          : err instanceof QuotaError ? "quota" : err.name === "TimeoutError" ? "timeout" : "parse";
         for (const j of batch) {
           results.push({ chain_id: j.chain_id, barcode: j.barcode, suggested_item_code: null, reason: null, cached: false, error: code });
         }
