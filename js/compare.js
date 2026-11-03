@@ -1,4 +1,5 @@
 // החישוב והכלל של סל חלקי: מחיר כפול כמות, סכום לכל רשת, והרשת הזולה ביותר.
+// מוצר במשקל (unit: "kg"): מחיר לק"ג (price_per_kg) כפול הכמות בק"ג.
 
 // הקוד של המוצר ברשת: בדרך כלל הברקוד, אלא אם הרשת משתמשת בקוד אחר (chain_codes)
 function codeIn(chainId, product) {
@@ -15,11 +16,16 @@ function toAgorot(price) {
 // מחזיר { results, notFound }:
 // - notFound: ברקודים שלא נמצאו באף רשת. הם לא נכנסים לאף סכום ולא לספירת החסרים.
 // - results: לכל רשת הסכום והמוצרים החסרים בה. רשת שחסר בה מוצר היא חלקית.
+//   weighted: המוצרים במשקל שנכנסו לסכום, עם המחיר לק"ג ברשת.
 //   חלופה שאושרה נכנסת לסכום במחיר שלה כפול הכמות, והמוצר לא נספר כחסר (substituted).
 //   "הזול ביותר" רק בין רשתות שהסל מלא בהן. אם אין כזו, אף רשת לא מקבלת אותה.
 export function compareBasket(items, products, chains, rows, approved = new Map()) {
-  const priceOf = new Map(rows.map((r) => [`${r.chain_id}:${r.item_code}`, r.price]));
-  const price = (chain, barcode) => priceOf.get(`${chain.chain_id}:${codeIn(chain.chain_id, products.get(barcode))}`);
+  const rowOf = new Map(rows.map((r) => [`${r.chain_id}:${r.item_code}`, r]));
+  const price = (chain, barcode) => {
+    const product = products.get(barcode);
+    const row = rowOf.get(`${chain.chain_id}:${codeIn(chain.chain_id, product)}`);
+    return product.unit === "kg" ? row?.price_per_kg : row?.price;
+  };
 
   const known = items.filter(({ barcode }) => products.has(barcode));
   const notFound = known
@@ -31,16 +37,20 @@ export function compareBasket(items, products, chains, rows, approved = new Map(
     let total = 0;
     const missing = [];
     const substituted = [];
+    const weighted = [];
     for (const { barcode, qty } of counted) {
       const p = price(chain, barcode);
       const sub = approved.get(`${chain.chain_id}:${barcode}`);
-      if (p != null) total += toAgorot(p) * qty;
-      else if (sub) {
+      if (p != null) {
+        // חצי ק"ג יכול לתת חצי אגורה: מעגלים כל שורה לאגורה שלמה
+        total += Math.round(toAgorot(p) * qty);
+        if (products.get(barcode).unit === "kg") weighted.push({ barcode, qty, perKg: toAgorot(p) });
+      } else if (sub) {
         total += toAgorot(sub.price) * qty;
         substituted.push({ barcode, item: sub });
       } else missing.push(barcode);
     }
-    return { chain, total, missing, substituted, complete: missing.length === 0, cheapest: false };
+    return { chain, total, missing, substituted, weighted, complete: missing.length === 0, cheapest: false };
   });
 
   const complete = results.filter((r) => r.complete);

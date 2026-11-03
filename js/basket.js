@@ -1,9 +1,11 @@
 // הסל וה-localStorage, במפתח אחד: { items: [{ barcode, qty }], decisions: {} }
+// מוצר במשקל: הכמות בק"ג, בקפיצות של חצי ק"ג. שאר המוצרים: יחידות שלמות.
 const STORAGE_KEY = "cartwise_basket";
-export const MIN_QTY = 1;
 export const MAX_QTY = 99;
+const KG_STEP = 0.5;
 
 let state = { items: [], decisions: {} };
+let weighted = new Set();
 
 function save() {
   try {
@@ -14,7 +16,9 @@ function save() {
 }
 
 // טוען את הסל השמור. ברקוד שכבר לא קיים ברשימת המוצרים נזרק בשקט.
-export function load(knownBarcodes) {
+// kgBarcodes: הברקודים של המוצרים במשקל
+export function load(knownBarcodes, kgBarcodes = new Set()) {
+  weighted = kgBarcodes;
   let saved = null;
   try {
     saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -26,14 +30,24 @@ export function load(knownBarcodes) {
   const seen = new Set();
   state.items = items
     .filter((it) => knownBarcodes.has(it?.barcode) && !seen.has(it.barcode) && seen.add(it.barcode))
-    .map((it) => ({ barcode: it.barcode, qty: clamp(Number(it.qty)) }));
+    .map((it) => ({ barcode: it.barcode, qty: clamp(it.barcode, Number(it.qty)) }));
   state.decisions = saved?.decisions && typeof saved.decisions === "object" ? saved.decisions : {};
   save();
 }
 
-function clamp(qty) {
-  if (!Number.isFinite(qty)) return MIN_QTY;
-  return Math.min(MAX_QTY, Math.max(MIN_QTY, Math.round(qty)));
+function step(barcode) {
+  return weighted.has(barcode) ? KG_STEP : 1;
+}
+
+// הכמות הקטנה ביותר: יחידה אחת, או חצי ק"ג
+export function minQty(barcode) {
+  return step(barcode);
+}
+
+function clamp(barcode, qty) {
+  const s = step(barcode);
+  if (!Number.isFinite(qty)) return weighted.has(barcode) ? 1 : s;
+  return Math.min(MAX_QTY, Math.max(s, Math.round(qty / s) * s));
 }
 
 function find(barcode) {
@@ -48,16 +62,18 @@ export function has(barcode) {
   return Boolean(find(barcode));
 }
 
+// מוצר חדש נכנס עם כמות 1: יחידה אחת, או ק"ג אחד
 export function add(barcode) {
   if (has(barcode)) return;
-  state.items.push({ barcode, qty: MIN_QTY });
+  state.items.push({ barcode, qty: 1 });
   save();
 }
 
-export function changeQty(barcode, delta) {
+// direction: 1 להגדלה, -1 להקטנה, בקפיצה אחת
+export function changeQty(barcode, direction) {
   const it = find(barcode);
   if (!it) return;
-  it.qty = clamp(it.qty + delta);
+  it.qty = clamp(barcode, it.qty + direction * step(barcode));
   save();
 }
 

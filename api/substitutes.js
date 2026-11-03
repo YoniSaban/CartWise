@@ -282,7 +282,10 @@ export default async function handler(req, res) {
     const jobs = [];
     for (const p of pairs) {
       const hit = cache.get(key(p.chain_id, p.barcode));
-      if (hit) {
+      // למוצרים במשקל אין חלופות בגרסה הזו
+      if (byBarcode.get(p.barcode).unit === "kg") {
+        results.push({ ...p, suggested_item_code: null, reason: "אין חלופה למוצרים במשקל", cached: false });
+      } else if (hit) {
         results.push({ ...p, suggested_item_code: hit.suggested_item_code, reason: hit.reason, cached: true });
       } else {
         jobs.push({ ...p, product: byBarcode.get(p.barcode) });

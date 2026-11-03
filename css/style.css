@@ -210,7 +210,8 @@ button:disabled { cursor: default; }
 
 .btn-qty:disabled { color: var(--field-border); border-color: var(--border); }
 
-.qty { min-width: 20px; text-align: center; font-weight: 700; }
+.qty { min-width: 20px; text-align: center; font-weight: 700; white-space: nowrap; }
+.qty-kg { min-width: 52px; }
 
 .btn-link {
   padding: 8px 4px;
@@ -276,7 +277,7 @@ h1:focus { outline: none; }
 
 .tag-partial { color: var(--warning); background: #FFF4E5; }
 
-.result-missing { margin: 2px 0 0; font-size: 13px; color: var(--text-muted); }
+.result-missing, .result-weighted, .result-note { margin: 2px 0 0; font-size: 13px; color: var(--text-muted); }
 
 /* מוצרים שלא נמצאו באף רשת: מסגרת מקווקווה, ההתראה למשתמש */
 .not-found {

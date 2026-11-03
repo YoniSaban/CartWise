@@ -1,8 +1,8 @@
 // מעבר בין מסכים: "בניית הסל", "המלצת חלופות" ו"פלט תוצאות"
-import * as basket from "./basket.js?v=6";
-import { fetchPrices } from "./prices.js?v=6";
-import { compareBasket, formatPrice } from "./compare.js?v=6";
-import { findSubstitutes } from "./substitutes.js?v=6";
+import * as basket from "./basket.js?v=7";
+import { fetchPrices } from "./prices.js?v=7";
+import { compareBasket, formatPrice } from "./compare.js?v=7";
+import { findSubstitutes } from "./substitutes.js?v=7";
 
 const $ = (id) => document.getElementById(id);
 
@@ -27,6 +27,11 @@ function label(p) {
 
 function announce(text) {
   $("announcer").textContent = text;
+}
+
+// כמות להצגה: "3" ליחידות, "1.5 ק"ג" למוצר במשקל
+function qtyText(barcode, qty) {
+  return byBarcode.get(barcode)?.unit === "kg" ? `${qty} ק"ג` : String(qty);
 }
 
 function countText(n) {
@@ -119,9 +124,9 @@ function renderBasket() {
     controls.append(
       el("button", { type: "button", class: "btn-qty", "data-action": "inc", "data-barcode": barcode,
         "aria-label": `הגדל כמות של ${p.name}`, disabled: qty >= basket.MAX_QTY }, "+"),
-      el("span", { class: "qty", "aria-label": `כמות: ${qty}` }, String(qty)),
+      el("span", { class: p.unit === "kg" ? "qty qty-kg" : "qty", "aria-label": `כמות: ${qtyText(barcode, qty)}` }, qtyText(barcode, qty)),
       el("button", { type: "button", class: "btn-qty", "data-action": "dec", "data-barcode": barcode,
-        "aria-label": `הקטן כמות של ${p.name}`, disabled: qty <= basket.MIN_QTY }, "−"),
+        "aria-label": `הקטן כמות של ${p.name}`, disabled: qty <= basket.minQty(barcode) }, "−"),
       el("button", { type: "button", class: "btn-link", "data-action": "remove", "data-barcode": barcode,
         "aria-label": `הסר ${p.name} מהסל` }, "הסר")
     );
@@ -165,7 +170,7 @@ function handleClick(event) {
     basket.changeQty(barcode, action === "inc" ? 1 : -1);
     render();
     const qty = basket.items().find((it) => it.barcode === barcode).qty;
-    announce(`כמות של ${name}: ${qty}`);
+    announce(`כמות של ${name}: ${qtyText(barcode, qty)}`);
     if (!focusButton(action, barcode)) focusButton(action === "inc" ? "dec" : "inc", barcode);
   } else if (action === "remove") {
     basket.remove(barcode);
@@ -210,6 +215,12 @@ function renderResults({ results, notFound }, counted) {
       el("p", { class: "price" }, formatPrice(r.total)),
       el("p", { class: r.complete ? "result-status" : "result-status partial" }, statusText(r, counted))
     );
+    // מוצר במשקל: הכמות והמחיר לק"ג ברשת הזו
+    for (const { barcode, qty, perKg } of r.weighted) {
+      li.append(el("p", { class: "result-weighted" },
+        `${byBarcode.get(barcode).name} ${qtyText(barcode, qty)} · ${formatPrice(perKg)} לק"ג`));
+    }
+    if (r.weighted.length) li.append(el("p", { class: "result-note" }, "מוצרים במשקל: מחיר משוער לפי ק\"ג"));
     for (const { barcode, item } of r.substituted) {
       li.append(el("p", { class: "result-missing" }, `⇄ חלופה: ${item.item_name} במקום ${byBarcode.get(barcode).name}`));
     }
@@ -359,8 +370,10 @@ async function compare() {
   $("btn-to-results").disabled = true;
   $("subs-status").textContent = "מחפשים חלופות ברשתות...";
   $("subs-title").focus();
+  // למוצרים במשקל אין חלופות בגרסה הזו: הם לא נשלחים לבדיקה, והכרטיס שלהם "חסר ברשת"
+  const ask = subsPairs.filter(({ barcode }) => byBarcode.get(barcode).unit !== "kg");
   try {
-    suggestions = await findSubstitutes(subsPairs.map(({ chain, barcode }) => ({ chain_id: chain.chain_id, barcode })));
+    if (ask.length) suggestions = await findSubstitutes(ask.map(({ chain, barcode }) => ({ chain_id: chain.chain_id, barcode })));
     $("subs-status").textContent = "";
   } catch {
     $("subs-status").textContent = "לא הצלחנו לבדוק חלופות כרגע. אפשר להמשיך לתוצאות עם סל חלקי.";
@@ -380,8 +393,8 @@ async function loadJson(path) {
 async function init() {
   try {
     [products, chains] = await Promise.all([
-      loadJson("data/products.json?v=6"),
-      loadJson("data/chains.json?v=6"),
+      loadJson("data/products.json?v=7"),
+      loadJson("data/chains.json?v=7"),
     ]);
   } catch {
     $("products-status").textContent = "לא הצלחנו לטעון את רשימת המוצרים. נסו לרענן את הדף.";
@@ -389,7 +402,7 @@ async function init() {
   }
 
   byBarcode = new Map(products.map((p) => [p.barcode, p]));
-  basket.load(new Set(byBarcode.keys()));
+  basket.load(new Set(byBarcode.keys()), new Set(products.filter((p) => p.unit === "kg").map((p) => p.barcode)));
   renderCategories();
   render();
 
