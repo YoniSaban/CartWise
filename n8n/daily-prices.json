@@ -811,7 +811,7 @@
         750
       ],
       "parameters": {
-        "jsCode": "// מחוץ ל-09:00 עד 18:00 שעון ישראל לא עושים כלום. אחרת, פריט לכל רשת\nconst hour = Number(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem', hour: '2-digit', hour12: false }));\nif (hour < 9 || hour >= 18) return [];\nreturn ['shufersal', 'wolt', 'tiv_taam'].map((chain) => ({ json: { chain } }));"
+        "jsCode": "// מחוץ ל-09:00 עד 18:00 שעון ישראל לא עושים כלום. אחרת, פריט לכל רשת\nconst hour = Number(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem', hour: '2-digit', hour12: false }));\nif (hour < 9 || hour >= 18) return [];\n// n8n עלה סמוך לשעה עגולה: הבדיקה של השעה העגולה תעשה את העדכון, כדי שלא ירוצו שני עדכונים באותו יום\nconst minute = new Date().getMinutes();\nif ($('n8n עלה').isExecuted && (minute >= 57 || minute <= 2)) return [];\nreturn ['shufersal', 'wolt', 'tiv_taam'].map((chain) => ({ json: { chain } }));"
       },
       "id": "n102"
     },
