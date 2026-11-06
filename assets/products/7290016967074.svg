@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><ellipse cx="100" cy="186" rx="58" ry="7" fill="#000" opacity="0.08"/>
+    <path d="M36 100c0-30 30-46 64-46s64 16 64 46v70a8 8 0 0 1-8 8H44a8 8 0 0 1-8-8z" fill="#7A4A22"/>
+    <path d="M48 104c0-22 24-36 52-36s52 14 52 36v64H48z" fill="#C8955A"/>
+    <circle cx="70" cy="110" r="2" fill="#7A4A22"/><circle cx="62" cy="134" r="2" fill="#7A4A22"/><circle cx="76" cy="152" r="2" fill="#7A4A22"/><circle cx="100" cy="110" r="2" fill="#7A4A22"/><circle cx="92" cy="134" r="2" fill="#7A4A22"/><circle cx="106" cy="152" r="2" fill="#7A4A22"/><circle cx="130" cy="110" r="2" fill="#7A4A22"/><circle cx="122" cy="134" r="2" fill="#7A4A22"/><circle cx="136" cy="152" r="2" fill="#7A4A22"/>
+    <text x="100" y="182" font-family="Rubik, Arial, sans-serif" font-weight="700" text-anchor="middle" font-size="12" fill="#5A3A1A">חיטה מלאה</text></svg>

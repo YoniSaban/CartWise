@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><ellipse cx="100" cy="186" rx="58" ry="7" fill="#000" opacity="0.08"/>
+    <path d="M30 110l50-30 90 30-50 34z" fill="#FFE9A8"/>
+    <path d="M30 110v40l90 34v-40z" fill="#F4D06F"/><path d="M120 144v40l50-34v-40z" fill="#E6BC4F"/>
+    <path d="M30 110l90 34" stroke="#fff" stroke-width="2" opacity="0.6"/>
+    <text x="76" y="158" font-family="Rubik, Arial, sans-serif" font-weight="700" text-anchor="middle" font-size="18" fill="#7A5A10">חמאה</text></svg>

@@ -1,8 +1,8 @@
 // מעבר בין מסכים: "בניית הסל", "המלצת חלופות" ו"פלט תוצאות"
-import * as basket from "./basket.js?v=7";
-import { fetchPrices } from "./prices.js?v=7";
-import { compareBasket, formatPrice } from "./compare.js?v=7";
-import { findSubstitutes } from "./substitutes.js?v=7";
+import * as basket from "./basket.js?v=8";
+import { fetchPrices } from "./prices.js?v=8";
+import { compareBasket, formatPrice } from "./compare.js?v=8";
+import { findSubstitutes } from "./substitutes.js?v=8";
 
 const $ = (id) => document.getElementById(id);
 
@@ -64,22 +64,28 @@ function renderProducts() {
   const list = $("products");
   list.replaceChildren();
 
+  // כרטיס לכל מוצר: תמונה גדולה עם "+" בפינה. כל התמונה היא כפתור אחד שמוסיף לסל
   for (const p of shown) {
     const inBasket = basket.has(p.barcode);
-    const li = el("li", { class: "card" });
-    const btn = el(
-      "button",
-      {
-        type: "button",
-        class: "btn-secondary btn-add",
-        "data-action": "add",
-        "data-barcode": p.barcode,
-        "aria-label": inBasket ? `${p.name} כבר בסל` : `הוסף ${p.name} לסל`,
-        disabled: inBasket,
-      },
-      inBasket ? "בסל ✓" : "הוסף"
+    const li = el("li", { class: inBasket ? "product-card in-basket" : "product-card" });
+    const btn = el("button", {
+      type: "button",
+      class: "product-add",
+      "data-action": "add",
+      "data-barcode": p.barcode,
+      "aria-label": inBasket ? `${p.name} כבר בסל` : `הוסף ${p.name} לסל`,
+      disabled: inBasket,
+    });
+    btn.append(
+      el("img", { src: p.image, alt: p.name, loading: "lazy", width: 200, height: 200 }),
+      el("span", { class: "add-badge", "aria-hidden": "true" }, inBasket ? "✓" : "+")
     );
-    li.append(productInfo(p, true), btn);
+    const info = el("div", { class: "product-info" });
+    info.append(
+      el("span", { class: "item-name" }, p.name),
+      el("span", { class: "item-meta" }, [p.size, p.manufacturer].filter(Boolean).join(" · "))
+    );
+    li.append(btn, info);
     list.append(li);
   }
 
@@ -393,8 +399,8 @@ async function loadJson(path) {
 async function init() {
   try {
     [products, chains] = await Promise.all([
-      loadJson("data/products.json?v=7"),
-      loadJson("data/chains.json?v=7"),
+      loadJson("data/products.json?v=8"),
+      loadJson("data/chains.json?v=8"),
     ]);
   } catch {
     $("products-status").textContent = "לא הצלחנו לטעון את רשימת המוצרים. נסו לרענן את הדף.";

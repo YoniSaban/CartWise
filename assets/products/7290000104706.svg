@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><ellipse cx="100" cy="186" rx="58" ry="7" fill="#000" opacity="0.08"/>
+    <path d="M44 34q56-14 112 0l6 142q-62 12-124 0z" fill="#3B7DD8"/>
+    <rect x="56" y="64" width="88" height="80" rx="40" fill="#E6F0FB"/>
+    <g transform="rotate(-30 78 120)"><path d="M71 100h14l-7 40z" fill="#F07B22"/><path d="M78 100l-6-12M78 100l6-12M78 100v-14" stroke="#3E9B4F" stroke-width="3" stroke-linecap="round"/></g><g transform="rotate(0 100 116)"><path d="M93 96h14l-7 40z" fill="#F07B22"/><path d="M100 96l-6-12M100 96l6-12M100 96v-14" stroke="#3E9B4F" stroke-width="3" stroke-linecap="round"/></g><g transform="rotate(30 122 120)"><path d="M115 100h14l-7 40z" fill="#F07B22"/><path d="M122 100l-6-12M122 100l6-12M122 100v-14" stroke="#3E9B4F" stroke-width="3" stroke-linecap="round"/></g>
+    <text x="100" y="166" font-family="Rubik, Arial, sans-serif" font-weight="700" text-anchor="middle" font-size="12" fill="#fff">גזר גמדי</text></svg>

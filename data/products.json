@@ -8,7 +8,8 @@
       "אורז",
       "פרסי"
     ],
-    "manufacturer": "סוגת"
+    "manufacturer": "סוגת",
+    "image": "assets/products/7290000211442.jpg"
   },
   {
     "barcode": "7290112494351",
@@ -19,7 +20,8 @@
       "קורנפלקס",
       "דגני"
     ],
-    "manufacturer": "תלמה"
+    "manufacturer": "תלמה",
+    "image": "assets/products/7290112494351.jpg"
   },
   {
     "barcode": "7290000178707",
@@ -30,7 +32,8 @@
       "תפוציפס",
       "חטיף"
     ],
-    "manufacturer": "שטראוס פריטו ליי"
+    "manufacturer": "שטראוס פריטו ליי",
+    "image": "assets/products/7290000178707.jpg"
   },
   {
     "barcode": "7290000023809",
@@ -42,7 +45,8 @@
       "קברנה",
       "אדום"
     ],
-    "manufacturer": "ברקן"
+    "manufacturer": "ברקן",
+    "image": "assets/products/7290000023809.svg"
   },
   {
     "barcode": "7290110114961",
@@ -54,7 +58,8 @@
       "תפוזים",
       "מיץ"
     ],
-    "manufacturer": "פריגת"
+    "manufacturer": "פריגת",
+    "image": "assets/products/7290110114961.jpg"
   },
   {
     "barcode": "7290000523804",
@@ -64,7 +69,8 @@
     "keywords": [
       "מלח"
     ],
-    "manufacturer": "מלח הארץ"
+    "manufacturer": "מלח הארץ",
+    "image": "assets/products/7290000523804.jpg"
   },
   {
     "barcode": "80135876",
@@ -76,7 +82,8 @@
       "שוקולד",
       "נוטלה"
     ],
-    "manufacturer": "פררו"
+    "manufacturer": "פררו",
+    "image": "assets/products/80135876.jpg"
   },
   {
     "barcode": "7290110115296",
@@ -88,7 +95,8 @@
       "משקה",
       "1.5"
     ],
-    "manufacturer": "החברה המרכזית"
+    "manufacturer": "החברה המרכזית",
+    "image": "assets/products/7290110115296.svg"
   },
   {
     "barcode": "7290003643387",
@@ -99,7 +107,8 @@
       "סוכר",
       "לבן"
     ],
-    "manufacturer": "סוגת"
+    "manufacturer": "סוגת",
+    "image": "assets/products/7290003643387.jpg"
   },
   {
     "barcode": "7290106576537",
@@ -109,7 +118,8 @@
     "keywords": [
       "חומוס"
     ],
-    "manufacturer": "צבר"
+    "manufacturer": "צבר",
+    "image": "assets/products/7290106576537.jpg"
   },
   {
     "barcode": "7290000074184",
@@ -121,7 +131,8 @@
       "עוגיות",
       "ביסקוויט"
     ],
-    "manufacturer": "אסם"
+    "manufacturer": "אסם",
+    "image": "assets/products/7290000074184.jpg"
   },
   {
     "barcode": "7290000060880",
@@ -132,7 +143,8 @@
       "ספגטי",
       "פסטה"
     ],
-    "manufacturer": "אסם"
+    "manufacturer": "אסם",
+    "image": "assets/products/7290000060880.jpg"
   },
   {
     "barcode": "8715700419732",
@@ -142,7 +154,8 @@
     "keywords": [
       "קטשופ"
     ],
-    "manufacturer": "היינץ"
+    "manufacturer": "היינץ",
+    "image": "assets/products/8715700419732.jpg"
   },
   {
     "barcode": "7290100701331",
@@ -152,7 +165,8 @@
     "keywords": [
       "קמח"
     ],
-    "manufacturer": "סוגת"
+    "manufacturer": "סוגת",
+    "image": "assets/products/7290100701331.jpg"
   },
   {
     "barcode": "7290000176420",
@@ -163,7 +177,8 @@
       "קפה",
       "נמס"
     ],
-    "manufacturer": "עלית"
+    "manufacturer": "עלית",
+    "image": "assets/products/7290000176420.jpg"
   },
   {
     "barcode": "7290000176062",
@@ -175,7 +190,8 @@
       "טורקי",
       "שחור"
     ],
-    "manufacturer": "עלית"
+    "manufacturer": "עלית",
+    "image": "assets/products/7290000176062.svg"
   },
   {
     "barcode": "7290000207162",
@@ -187,7 +203,8 @@
       "רסק",
       "רוטב"
     ],
-    "manufacturer": "יכין"
+    "manufacturer": "יכין",
+    "image": "assets/products/7290000207162.jpg"
   },
   {
     "barcode": "4000417224002",
@@ -198,7 +215,8 @@
       "שוקולד",
       "מריר"
     ],
-    "manufacturer": "ריטר"
+    "manufacturer": "ריטר",
+    "image": "assets/products/4000417224002.jpg"
   },
   {
     "barcode": "7290014692565",
@@ -208,7 +226,8 @@
     "keywords": [
       "תירס",
       "גרעיני"
-    ]
+    ],
+    "image": "assets/products/7290014692565.svg"
   },
   {
     "barcode": "7290000144474",
@@ -219,7 +238,8 @@
       "שמן",
       "קנולה"
     ],
-    "manufacturer": "שמן תעשיות"
+    "manufacturer": "שמן תעשיות",
+    "image": "assets/products/7290000144474.svg"
   },
   {
     "barcode": "7290000345284",
@@ -229,7 +249,8 @@
     "keywords": [
       "תה"
     ],
-    "manufacturer": "ויסוצקי"
+    "manufacturer": "ויסוצקי",
+    "image": "assets/products/7290000345284.jpg"
   },
   {
     "barcode": "7290013083661",
@@ -241,7 +262,8 @@
       "תמ\"ל",
       "תינוקות"
     ],
-    "manufacturer": "מטרנה"
+    "manufacturer": "מטרנה",
+    "image": "assets/products/7290013083661.svg"
   },
   {
     "barcode": "7290010429554",
@@ -252,7 +274,8 @@
       "שמן",
       "זית"
     ],
-    "manufacturer": "יד מרדכי"
+    "manufacturer": "יד מרדכי",
+    "image": "assets/products/7290010429554.svg"
   },
   {
     "barcode": "7290016509786",
@@ -264,7 +287,8 @@
       "ג'ל",
       "אבקת"
     ],
-    "manufacturer": "הנקל"
+    "manufacturer": "הנקל",
+    "image": "assets/products/7290016509786.svg"
   },
   {
     "barcode": "7702018980819",
@@ -275,7 +299,8 @@
       "גילוח",
       "ג'ל"
     ],
-    "manufacturer": "P&G"
+    "manufacturer": "P&G",
+    "image": "assets/products/7702018980819.svg"
   },
   {
     "barcode": "8717163655825",
@@ -287,7 +312,8 @@
       "רקסונה",
       "ספריי"
     ],
-    "manufacturer": "יוניליוור"
+    "manufacturer": "יוניליוור",
+    "image": "assets/products/8717163655825.svg"
   },
   {
     "barcode": "8717163647226",
@@ -299,7 +325,8 @@
       "אקס",
       "ספריי"
     ],
-    "manufacturer": "יוניליוור"
+    "manufacturer": "יוניליוור",
+    "image": "assets/products/8717163647226.svg"
   },
   {
     "barcode": "7290000197456",
@@ -310,7 +337,8 @@
       "חיתולים",
       "האגיס"
     ],
-    "manufacturer": "האגיס"
+    "manufacturer": "האגיס",
+    "image": "assets/products/7290000197456.svg"
   },
   {
     "barcode": "7290000195773",
@@ -320,7 +348,8 @@
     "keywords": [
       "מגבונים"
     ],
-    "manufacturer": "האגיס"
+    "manufacturer": "האגיס",
+    "image": "assets/products/7290000195773.svg"
   },
   {
     "barcode": "7290116536262",
@@ -331,7 +360,8 @@
       "מרכך",
       "כביסה"
     ],
-    "manufacturer": "יוניליוור"
+    "manufacturer": "יוניליוור",
+    "image": "assets/products/7290116536262.svg"
   },
   {
     "barcode": "8718951626195",
@@ -342,7 +372,8 @@
       "משחת",
       "שיניים"
     ],
-    "manufacturer": "קולגייט"
+    "manufacturer": "קולגייט",
+    "image": "assets/products/8718951626195.svg"
   },
   {
     "barcode": "4084500853553",
@@ -354,7 +385,8 @@
       "פיירי",
       "נוזל"
     ],
-    "manufacturer": "P&G"
+    "manufacturer": "P&G",
+    "image": "assets/products/4084500853553.svg"
   },
   {
     "barcode": "7290013269621",
@@ -366,7 +398,8 @@
       "נוזל",
       "ניקוי"
     ],
-    "manufacturer": "סנו"
+    "manufacturer": "סנו",
+    "image": "assets/products/7290013269621.svg"
   },
   {
     "barcode": "8714789733289",
@@ -378,7 +411,8 @@
       "תחליב",
       "סבון"
     ],
-    "manufacturer": "קולגייט-פלמוליב"
+    "manufacturer": "קולגייט-פלמוליב",
+    "image": "assets/products/8714789733289.svg"
   },
   {
     "barcode": "7290112492449",
@@ -388,7 +422,8 @@
     "keywords": [
       "שמפו"
     ],
-    "manufacturer": "יוניליוור"
+    "manufacturer": "יוניליוור",
+    "image": "assets/products/7290112492449.svg"
   },
   {
     "barcode": "7290016197839",
@@ -399,7 +434,8 @@
       "שקיות",
       "אשפה"
     ],
-    "manufacturer": "חוגלה קימברלי"
+    "manufacturer": "חוגלה קימברלי",
+    "image": "assets/products/7290016197839.svg"
   },
   {
     "barcode": "7290000190853",
@@ -410,7 +446,8 @@
       "נייר",
       "טואלט"
     ],
-    "manufacturer": "לילי"
+    "manufacturer": "לילי",
+    "image": "assets/products/7290000190853.svg"
   },
   {
     "barcode": "7290017872971",
@@ -422,7 +459,8 @@
       "גילוח",
       "סכין"
     ],
-    "manufacturer": "לא מצוין"
+    "manufacturer": "לא מצוין",
+    "image": "assets/products/7290017872971.svg"
   },
   {
     "barcode": "7290000104706",
@@ -432,7 +470,8 @@
     "keywords": [
       "גזר"
     ],
-    "manufacturer": "סנפרוסט"
+    "manufacturer": "סנפרוסט",
+    "image": "assets/products/7290000104706.svg"
   },
   {
     "barcode": "7290000104676",
@@ -443,7 +482,8 @@
       "אפונה",
       "מוקפא"
     ],
-    "manufacturer": "סנפרוסט"
+    "manufacturer": "סנפרוסט",
+    "image": "assets/products/7290000104676.jpg"
   },
   {
     "barcode": "998000000001",
@@ -459,7 +499,8 @@
       "shufersal": "7290000964775",
       "tiv_taam": "4412616",
       "wolt": "7290101503583"
-    }
+    },
+    "image": "assets/products/998000000001.svg"
   },
   {
     "barcode": "998000000002",
@@ -474,7 +515,8 @@
       "shufersal": "7290000000480",
       "tiv_taam": "9913019",
       "wolt": "7290101503606"
-    }
+    },
+    "image": "assets/products/998000000002.svg"
   },
   {
     "barcode": "998000000003",
@@ -489,7 +531,8 @@
       "shufersal": "7290000000138",
       "tiv_taam": "4412852",
       "wolt": "8004643753523"
-    }
+    },
+    "image": "assets/products/998000000003.svg"
   },
   {
     "barcode": "998000000004",
@@ -504,7 +547,8 @@
     "chain_codes": {
       "shufersal": "7290000000046",
       "wolt": "7290101503644"
-    }
+    },
+    "image": "assets/products/998000000004.svg"
   },
   {
     "barcode": "998000000005",
@@ -521,7 +565,8 @@
       "shufersal": "7290000000022",
       "tiv_taam": "4412784",
       "wolt": "7290101503675"
-    }
+    },
+    "image": "assets/products/998000000005.svg"
   },
   {
     "barcode": "998000000006",
@@ -536,7 +581,8 @@
       "shufersal": "7290000000091",
       "tiv_taam": "9913002",
       "wolt": "7290101503682"
-    }
+    },
+    "image": "assets/products/998000000006.svg"
   },
   {
     "barcode": "998000000007",
@@ -553,7 +599,8 @@
       "shufersal": "7290000000596",
       "tiv_taam": "7290018825211",
       "wolt": "7290018825822"
-    }
+    },
+    "image": "assets/products/998000000007.svg"
   },
   {
     "barcode": "998000000008",
@@ -569,7 +616,8 @@
     "chain_codes": {
       "shufersal": "7290009137507",
       "wolt": "7290018758267"
-    }
+    },
+    "image": "assets/products/998000000008.svg"
   },
   {
     "barcode": "7290000048185",
@@ -580,7 +628,8 @@
       "גבינה",
       "לבנה"
     ],
-    "manufacturer": "תנובה"
+    "manufacturer": "תנובה",
+    "image": "assets/products/7290000048185.svg"
   },
   {
     "barcode": "7290000052311",
@@ -592,7 +641,8 @@
       "צהובה",
       "עמק"
     ],
-    "manufacturer": "תנובה"
+    "manufacturer": "תנובה",
+    "image": "assets/products/7290000052311.jpg"
   },
   {
     "barcode": "7290004131074",
@@ -603,7 +653,8 @@
       "חלב",
       "3%"
     ],
-    "manufacturer": "תנובה"
+    "manufacturer": "תנובה",
+    "image": "assets/products/7290004131074.jpg"
   },
   {
     "barcode": "7290116932033",
@@ -613,7 +664,8 @@
     "keywords": [
       "חמאה"
     ],
-    "manufacturer": "תנובה"
+    "manufacturer": "תנובה",
+    "image": "assets/products/7290116932033.svg"
   },
   {
     "barcode": "7290000408316",
@@ -623,7 +675,8 @@
     "keywords": [
       "יוגורט"
     ],
-    "manufacturer": "שטראוס"
+    "manufacturer": "שטראוס",
+    "image": "assets/products/7290000408316.jpg"
   },
   {
     "barcode": "7290115678376",
@@ -634,7 +687,8 @@
       "מעדן",
       "שוקולד"
     ],
-    "manufacturer": "שטראוס"
+    "manufacturer": "שטראוס",
+    "image": "assets/products/7290115678376.svg"
   },
   {
     "barcode": "7290004127329",
@@ -644,7 +698,8 @@
     "keywords": [
       "קוטג"
     ],
-    "manufacturer": "תנובה"
+    "manufacturer": "תנובה",
+    "image": "assets/products/7290004127329.jpg"
   },
   {
     "barcode": "7290000043814",
@@ -656,7 +711,8 @@
       "להקצפה",
       "מתוקה"
     ],
-    "manufacturer": "תנובה"
+    "manufacturer": "תנובה",
+    "image": "assets/products/7290000043814.jpg"
   },
   {
     "barcode": "7290001201619",
@@ -667,7 +723,8 @@
       "ביצים",
       "ביצה"
     ],
-    "manufacturer": "מ. לסר"
+    "manufacturer": "מ. לסר",
+    "image": "assets/products/7290001201619.svg"
   },
   {
     "barcode": "7290005287251",
@@ -677,7 +734,8 @@
     "keywords": [
       "טונה"
     ],
-    "manufacturer": "סטארקיסט"
+    "manufacturer": "סטארקיסט",
+    "image": "assets/products/7290005287251.jpg"
   },
   {
     "barcode": "7290002371533",
@@ -688,7 +746,8 @@
       "פסטרמה",
       "נקניק"
     ],
-    "manufacturer": "טירת צבי"
+    "manufacturer": "טירת צבי",
+    "image": "assets/products/7290002371533.svg"
   },
   {
     "barcode": "998000000009",
@@ -705,7 +764,8 @@
       "shufersal": "7290000933740",
       "tiv_taam": "6355300",
       "wolt": "7290004281991"
-    }
+    },
+    "image": "assets/products/998000000009.svg"
   },
   {
     "barcode": "998000000010",
@@ -722,7 +782,8 @@
       "shufersal": "7290009011043",
       "tiv_taam": "8881388",
       "wolt": "7290002042907"
-    }
+    },
+    "image": "assets/products/998000000010.svg"
   },
   {
     "barcode": "998000000011",
@@ -738,7 +799,8 @@
       "shufersal": "7290000616827",
       "tiv_taam": "7290010619054",
       "wolt": "7290004485207"
-    }
+    },
+    "image": "assets/products/998000000011.svg"
   },
   {
     "barcode": "998000000012",
@@ -754,7 +816,8 @@
       "shufersal": "7290001303436",
       "tiv_taam": "6520531",
       "wolt": "7290004485191"
-    }
+    },
+    "image": "assets/products/998000000012.svg"
   },
   {
     "barcode": "7290018500361",
@@ -765,7 +828,8 @@
       "לחם",
       "אחיד"
     ],
-    "manufacturer": "אנגל"
+    "manufacturer": "אנגל",
+    "image": "assets/products/7290018500361.jpg"
   },
   {
     "barcode": "7290016967074",
@@ -777,7 +841,8 @@
       "חיטה",
       "מלאה"
     ],
-    "manufacturer": "אנגל"
+    "manufacturer": "אנגל",
+    "image": "assets/products/7290016967074.svg"
   },
   {
     "barcode": "7290020216311",
@@ -788,7 +853,8 @@
       "פיתות",
       "פיתה"
     ],
-    "manufacturer": "אנגל"
+    "manufacturer": "אנגל",
+    "image": "assets/products/7290020216311.svg"
   },
   {
     "barcode": "7290002065555",
@@ -798,6 +864,7 @@
     "keywords": [
       "לחמניות"
     ],
-    "manufacturer": "אנגל"
+    "manufacturer": "אנגל",
+    "image": "assets/products/7290002065555.jpg"
   }
 ]

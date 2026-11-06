@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><ellipse cx="100" cy="186" rx="58" ry="7" fill="#000" opacity="0.08"/>
+    <path d="M128 40h14a10 10 0 0 1 10 10v34a10 10 0 0 1-10 10h-14v-12h10V52h-10z" fill="#6FA8DC"/>
+    <rect x="66" y="22" width="26" height="14" rx="4" fill="#2F6DB5"/>
+    <path d="M62 36h70a12 12 0 0 1 12 12v124a10 10 0 0 1-10 10H60a10 10 0 0 1-10-10V56c0-12 6-20 12-20z" fill="#6FA8DC"/>
+    <rect x="56" y="94" width="82" height="56" rx="6" fill="#FFFFFF"/>
+    <text x="97" y="118" font-family="Rubik, Arial, sans-serif" font-weight="700" text-anchor="middle" font-size="18" fill="#2F6DB5">מרכך</text><text x="97" y="136" font-family="Rubik, Arial, sans-serif" font-weight="700" text-anchor="middle" font-size="15" fill="#2F6DB5">כביסה</text></svg>

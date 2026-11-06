@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><ellipse cx="100" cy="186" rx="58" ry="7" fill="#000" opacity="0.08"/>
+    <rect x="88" y="18" width="24" height="16" rx="4" fill="#6A3E99"/>
+    <path d="M90 34h20v14c0 6 22 12 22 30v98a8 8 0 0 1-8 8H76a8 8 0 0 1-8-8V78c0-18 22-24 22-30z" fill="#9B6BC7"/>
+    <rect x="68" y="98" width="64" height="52" fill="#FFFFFF"/>
+    <text x="100" y="122" font-family="Rubik, Arial, sans-serif" font-weight="700" text-anchor="middle" font-size="18" fill="#6A3E99">שמפו</text></svg>

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><ellipse cx="100" cy="186" rx="58" ry="7" fill="#000" opacity="0.08"/>
+    <path d="M44 40q56-14 112 0l6 136q-62 12-124 0z" fill="#7FB8E8"/>
+    <path d="M44 40q56-14 112 0v10q-56-12-112 0z" fill="#000" opacity="0.12"/>
+    <rect x="58" y="88" width="84" height="60" rx="10" fill="#FFFFFF"/>
+    <text x="100" y="114" font-family="Rubik, Arial, sans-serif" font-weight="700" text-anchor="middle" font-size="15" fill="#1F5E9E">חיתולים</text><text x="100" y="132" font-family="Rubik, Arial, sans-serif" font-weight="700" text-anchor="middle" font-size="15" fill="#1F5E9E">מידה 4</text></svg>
