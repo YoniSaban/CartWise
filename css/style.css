@@ -187,7 +187,7 @@ h2 { margin: 24px 0 8px; font-size: 16px; font-weight: 700; }
   object-fit: contain;
 }
 
-.product-add:not(:disabled):hover img { transform: scale(1.04); }
+.product-add:not([aria-disabled="true"]):hover img { transform: scale(1.04); }
 .product-add img { transition: transform 0.15s; }
 
 .add-badge {
@@ -458,3 +458,4 @@ h1:focus { outline: none; }
 
 /* החלופה: מחיר, גודל ומחיר ל-100 גרם */
 .sub-price { margin: 2px 0 0; font-size: 13px; color: var(--text-muted); }
+button[aria-disabled="true"] { cursor: default; }

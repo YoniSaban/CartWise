@@ -1,8 +1,8 @@
 // מעבר בין מסכים: "בניית הסל", "המלצת חלופות" ו"פלט תוצאות"
-import * as basket from "./basket.js?v=10";
-import { fetchPrices } from "./prices.js?v=10";
-import { compareBasket, formatPrice, parseChainSize, parseSizeText, unitPrice } from "./compare.js?v=10";
-import { findSubstitutes } from "./substitutes.js?v=10";
+import * as basket from "./basket.js?v=11";
+import { fetchPrices } from "./prices.js?v=11";
+import { compareBasket, formatPrice, parseChainSize, parseSizeText, unitPrice } from "./compare.js?v=11";
+import { findSubstitutes } from "./substitutes.js?v=11";
 
 const $ = (id) => document.getElementById(id);
 
@@ -80,7 +80,8 @@ function renderProducts() {
       "data-action": "add",
       "data-barcode": p.barcode,
       "aria-label": inBasket ? `${p.name} כבר בסל` : `הוסף ${p.name} לסל`,
-      disabled: inBasket,
+      // מוצר שכבר בסל: הכפתור נשאר בפוקוס (לא disabled), כדי שאפשר יהיה להמשיך בגריד
+      "aria-disabled": inBasket ? "true" : false,
     });
     btn.append(
       el("img", { src: p.image, alt: p.name, loading: "lazy", width: 200, height: 200 }),
@@ -160,10 +161,11 @@ function render() {
   renderBasket();
 }
 
-// אחרי ציור מחדש מחזירים את הפוקוס לכפתור המתאים, כדי שאפשר יהיה להמשיך עם המקלדת
+// אחרי ציור מחדש מחזירים את הפוקוס לכפתור המתאים, כדי שאפשר יהיה להמשיך עם המקלדת.
+// בלי גלילה: המסך נשאר איפה שהמשתמש היה
 function focusButton(action, barcode) {
   const btn = document.querySelector(`[data-action="${action}"][data-barcode="${barcode}"]`);
-  if (btn && !btn.disabled) btn.focus();
+  if (btn && !btn.disabled) btn.focus({ preventScroll: true });
   return Boolean(btn && !btn.disabled);
 }
 
@@ -174,10 +176,12 @@ function handleClick(event) {
   const name = byBarcode.get(barcode)?.name;
 
   if (action === "add") {
+    // הוספה משאירה את המשתמש בגריד של המוצרים, על אותו כרטיס
+    if (basket.has(barcode)) return announce(`${name} כבר בסל`);
     basket.add(barcode);
     render();
     announce(`${name} נוסף לסל. בסל ${countText(basket.items().length)}`);
-    focusButton("inc", barcode);
+    focusButton("add", barcode);
   } else if (action === "inc" || action === "dec") {
     basket.changeQty(barcode, action === "inc" ? 1 : -1);
     render();
@@ -502,8 +506,8 @@ async function loadJson(path) {
 async function init() {
   try {
     [products, chains] = await Promise.all([
-      loadJson("data/products.json?v=10"),
-      loadJson("data/chains.json?v=10"),
+      loadJson("data/products.json?v=11"),
+      loadJson("data/chains.json?v=11"),
     ]);
   } catch {
     $("products-status").textContent = "לא הצלחנו לטעון את רשימת המוצרים. נסו לרענן את הדף.";
