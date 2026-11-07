@@ -52,6 +52,10 @@ body {
   gap: 10px;
 }
 
+.brand-en {
+  margin-right: auto;
+}
+
 .brand-logo {
   width: 40px;
   height: 40px;
