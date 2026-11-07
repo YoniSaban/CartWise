@@ -1,8 +1,8 @@
 // מעבר בין מסכים: "בניית הסל", "המלצת חלופות" ו"פלט תוצאות"
-import * as basket from "./basket.js?v=8";
-import { fetchPrices } from "./prices.js?v=8";
-import { compareBasket, formatPrice } from "./compare.js?v=8";
-import { findSubstitutes } from "./substitutes.js?v=8";
+import * as basket from "./basket.js?v=9";
+import { fetchPrices } from "./prices.js?v=9";
+import { compareBasket, formatPrice } from "./compare.js?v=9";
+import { findSubstitutes } from "./substitutes.js?v=9";
 
 const $ = (id) => document.getElementById(id);
 
@@ -19,6 +19,12 @@ let suggestions = new Map();
 // החיפוש מתעלם מגרשיים, ממרכאות ומרווחים מיותרים: קוטג' = קוטג
 function normalize(text) {
   return text.replace(/['"׳״`]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+// החיפוש בודק את שם המוצר, מילות המפתח והיצרן: "מיץ" מוצא גם את פריגת
+function matches(p, query) {
+  return [p.name, p.manufacturer, ...(p.keywords || [])]
+    .some((text) => text && normalize(text).includes(query));
 }
 
 function label(p) {
@@ -59,7 +65,7 @@ function productInfo(p, withMeta) {
 function renderProducts() {
   const query = normalize($("search").value);
   const shown = products.filter(
-    (p) => (!activeCategory || p.category === activeCategory) && (!query || normalize(p.name).includes(query))
+    (p) => (!activeCategory || p.category === activeCategory) && (!query || matches(p, query))
   );
   const list = $("products");
   list.replaceChildren();
@@ -145,7 +151,7 @@ function renderBasket() {
 
   const compare = $("btn-compare");
   compare.disabled = items.length === 0;
-  compare.textContent = items.length ? "השווה" : "השווה (סל ריק)";
+  compare.textContent = items.length ? `השווה (${countText(items.length)})` : "השווה (סל ריק)";
   $("btn-clear").disabled = items.length === 0;
 }
 
@@ -205,9 +211,26 @@ function productNames(barcodes) {
   return barcodes.map((b) => byBarcode.get(b).name).join(", ");
 }
 
+// מחירים של רשת שלא התעדכנו יותר מיומיים נחשבים ישנים
+const STALE_MS = 2 * 24 * 60 * 60 * 1000;
+
+// התאריך של העדכון האחרון בכל רשת, מהשורות של הסל: chain_id -> loaded_at
+function updatedByChain(rows) {
+  const latest = new Map();
+  for (const r of rows) {
+    if (r.loaded_at && !(latest.get(r.chain_id) >= r.loaded_at)) latest.set(r.chain_id, r.loaded_at);
+  }
+  return latest;
+}
+
 function renderResults({ results, notFound }, counted) {
   const list = $("results");
   list.replaceChildren();
+  const updated = updatedByChain(lastRows);
+  // החיסכון: ההפרש בין הזולה ליקרה, רק בין רשתות שהסל מלא בהן
+  const complete = results.filter((r) => r.complete);
+  const saving = complete.length > 1
+    ? Math.max(...complete.map((r) => r.total)) - Math.min(...complete.map((r) => r.total)) : 0;
   for (const r of results) {
     const li = el("li", { class: r.cheapest ? "card result cheapest" : "card result" });
     const head = el("div", { class: "result-head" });
@@ -221,6 +244,15 @@ function renderResults({ results, notFound }, counted) {
       el("p", { class: "price" }, formatPrice(r.total)),
       el("p", { class: r.complete ? "result-status" : "result-status partial" }, statusText(r, counted))
     );
+    if (r.cheapest && saving > 0) {
+      li.append(el("p", { class: "result-saving" }, `חיסכון של ${formatPrice(saving)} לעומת הרשת היקרה`));
+    }
+    const at = updated.get(r.chain.chain_id);
+    if (at && Date.now() - new Date(at) > STALE_MS) {
+      li.append(el("p", { class: "result-updated stale" }, `⚠ מחירים ישנים: עודכנו לאחרונה ב-${formatDate(at)}`));
+    } else if (at) {
+      li.append(el("p", { class: "result-updated" }, `המחירים עודכנו ב-${formatDate(at)}`));
+    }
     // מוצר במשקל: הכמות והמחיר לק"ג ברשת הזו
     for (const { barcode, qty, perKg } of r.weighted) {
       li.append(el("p", { class: "result-weighted" },
@@ -272,8 +304,6 @@ function showResults() {
   const { results, notFound } = comparison;
   renderResults(comparison, lastItems.length - notFound.length);
   $("not-found-section").hidden = false;
-  const latest = lastRows.map((r) => r.loaded_at).sort().pop();
-  $("results-updated").textContent = latest ? `המחירים עודכנו ב-${formatDate(latest)}` : "";
   const best = results.find((r) => r.cheapest);
   const lost = !notFound.length ? ""
     : notFound.length === 1 ? ". מוצר אחד לא נמצא באף רשת" : `. ${notFound.length} מוצרים לא נמצאו באף רשת`;
@@ -346,7 +376,6 @@ async function compare() {
   showScreen("screen-results");
   $("results").replaceChildren();
   $("not-found-section").hidden = true;
-  $("results-updated").textContent = "";
   $("results-status").textContent = "מחשבים את עלות הסל...";
   $("results-title").focus();
 
@@ -399,8 +428,8 @@ async function loadJson(path) {
 async function init() {
   try {
     [products, chains] = await Promise.all([
-      loadJson("data/products.json?v=8"),
-      loadJson("data/chains.json?v=8"),
+      loadJson("data/products.json?v=9"),
+      loadJson("data/chains.json?v=9"),
     ]);
   } catch {
     $("products-status").textContent = "לא הצלחנו לטעון את רשימת המוצרים. נסו לרענן את הדף.";

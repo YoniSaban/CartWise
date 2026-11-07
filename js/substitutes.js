@@ -1,6 +1,6 @@
 // קריאה ל-/api/substitutes, ואז השם והמחיר של כל חלופה מ-Supabase.
 // המחיר מגיע רק מ-chain_items, אף פעם לא מהמודל.
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, FUNCTION_URL } from "./config.js?v=8";
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, FUNCTION_URL } from "./config.js?v=9";
 
 // pairs: [{ chain_id, barcode }]. מחזיר [{ chain_id, barcode, suggested_item_code, reason, error? }]
 async function requestSubstitutes(pairs) {
