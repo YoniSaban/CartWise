@@ -1,8 +1,8 @@
 // מעבר בין מסכים: "בניית הסל", "המלצת חלופות" ו"פלט תוצאות"
-import * as basket from "./basket.js?v=9";
-import { fetchPrices } from "./prices.js?v=9";
-import { compareBasket, formatPrice } from "./compare.js?v=9";
-import { findSubstitutes } from "./substitutes.js?v=9";
+import * as basket from "./basket.js?v=10";
+import { fetchPrices } from "./prices.js?v=10";
+import { compareBasket, formatPrice, parseChainSize, parseSizeText, unitPrice } from "./compare.js?v=10";
+import { findSubstitutes } from "./substitutes.js?v=10";
 
 const $ = (id) => document.getElementById(id);
 
@@ -192,10 +192,38 @@ function handleClick(event) {
   }
 }
 
-// מציג מסך אחד ומסתיר את השאר
-function showScreen(id) {
+// מציג מסך אחד ומסתיר את השאר.
+// כל מעבר מסך נרשם בהיסטוריה של הדפדפן, כדי שכפתור "חזרה" של הטלפון יחזור למסך הקודם
+// ולא יצא מהאתר. nav: "push" מסך חדש, "replace" במקום הנוכחי, "none" (כשחוזרים בהיסטוריה).
+function showScreen(id, nav = "push") {
   document.querySelectorAll(".screen").forEach((s) => (s.hidden = s.id !== id));
   window.scrollTo(0, 0);
+  const depth = history.state?.depth ?? 0;
+  if (nav === "push" && history.state?.screen !== id) history.pushState({ screen: id, depth: depth + 1 }, "");
+  else if (nav === "replace") history.replaceState({ screen: id, depth }, "");
+}
+
+// חזרה לבניית הסל: אחורה בהיסטוריה עד המסך הראשון, כדי שהיסטוריה לא תתארך
+function goBuild() {
+  const depth = history.state?.depth ?? 0;
+  if (depth > 0) history.go(-depth);
+  else showScreen("screen-build", "replace");
+}
+
+// כפתור "חזרה" (או "קדימה") של הדפדפן. מסך שאין לו נתונים (למשל אחרי רענון): בניית הסל
+function handlePopState(event) {
+  const screen = event.state?.screen ?? "screen-build";
+  if (screen === "screen-subs" && subsPairs.length) {
+    showScreen("screen-subs", "none");
+    renderSubs(subsPairs);
+    $("subs-title").focus();
+  } else if (screen === "screen-results" && lastItems.length) {
+    showResults("none");
+  } else {
+    showScreen("screen-build", "none");
+    render();
+    $("btn-compare").focus();
+  }
 }
 
 // counted: מספר המוצרים שנכנסו לחישוב, בלי אלה שלא נמצאו באף רשת
@@ -263,6 +291,7 @@ function renderResults({ results, notFound }, counted) {
       li.append(el("p", { class: "result-missing" }, `⇄ חלופה: ${item.item_name} במקום ${byBarcode.get(barcode).name}`));
     }
     if (!r.complete) li.append(el("p", { class: "result-missing" }, `חסר ברשת: ${productNames(r.missing)}`));
+    li.append(breakdown(r));
     list.append(li);
   }
 
@@ -281,6 +310,24 @@ function renderResults({ results, notFound }, counted) {
   box.append(ul);
 }
 
+// פירוט המחירים ברשת: שורה לכל מוצר, סגור עד לחיצה
+function breakdown(r) {
+  const details = el("details", { class: "breakdown" });
+  details.append(el("summary", {}, "פירוט מחירים"));
+  const ul = el("ul", { class: "breakdown-list" });
+  for (const { barcode, qty, amount, sub } of r.lines) {
+    const li = el("li", amount == null ? { class: "missing" } : {});
+    const name = sub ? `⇄ ${sub.item_name}` : byBarcode.get(barcode).name;
+    li.append(
+      el("span", { class: "breakdown-name" }, `${name} × ${qtyText(barcode, qty)}`),
+      el("span", { class: "breakdown-price" }, amount == null ? "חסר ברשת" : formatPrice(amount))
+    );
+    ul.append(li);
+  }
+  details.append(ul);
+  return details;
+}
+
 function formatDate(iso) {
   const d = new Date(iso);
   return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
@@ -295,8 +342,8 @@ function approvedSubstitutes() {
   return approved;
 }
 
-function showResults() {
-  showScreen("screen-results");
+function showResults(nav = "push") {
+  showScreen("screen-results", nav);
   $("results-status").textContent = "";
   $("results-title").focus();
 
@@ -341,6 +388,7 @@ function renderSubs(pairs) {
 
     const value = basket.decision(chain.chain_id, barcode);
     li.append(el("p", { class: "sub-offer" }, `חלופה מוצעת: ${s.item.item_name}`));
+    for (const line of subPriceLines(s.item, p)) li.append(el("p", { class: "sub-price" }, line));
     if (s.reason) li.append(el("p", { class: "sub-reason" }, s.reason));
     const buttons = el("div", { class: "sub-actions" });
     buttons.append(
@@ -359,6 +407,29 @@ function renderSubs(pairs) {
 }
 
 let subsPairs = [];
+
+// גודל להצגה: { amount: 1500, base: "ml" } -> "1.5 ליטר"
+function sizeText({ amount, base }) {
+  if (amount >= 1000) return `${+(amount / 1000).toFixed(2)} ${base === "g" ? 'ק"ג' : "ליטר"}`;
+  return `${+amount.toFixed(1)} ${base === "g" ? "גרם" : 'מ"ל'}`;
+}
+
+// המחיר של החלופה, הגודל שלה, ומחיר ל-100 גרם או 100 מ"ל מול המוצר המקורי ברשת הזולה ביותר שיש בה אותו.
+// גודל שלא מזוהה: רק המחיר, בלי השוואה.
+function subPriceLines(item, product) {
+  const parts = [`מחיר: ${formatPrice(Math.round(Number(item.price) * 100))}`];
+  const size = parseChainSize(item.quantity, item.unit);
+  const original = parseSizeText(product.size);
+  if (size) parts.push(`גודל: ${sizeText(size)} (המקורי: ${product.size})`);
+  if (!size || !original || size.base !== original.base) return parts;
+
+  const per = size.base === "g" ? "ל-100 גרם" : 'ל-100 מ"ל';
+  parts.push(`מחיר ${per}: ${formatPrice(unitPrice(item.price, size))}`);
+  const codes = new Set([product.barcode, ...Object.values(product.chain_codes || {})]);
+  const prices = lastRows.filter((r) => codes.has(r.item_code) && r.price != null).map((r) => Number(r.price));
+  if (prices.length) parts.push(`המקורי ברשת אחרת, ${per}: ${formatPrice(unitPrice(Math.min(...prices), original))}`);
+  return parts;
+}
 
 function handleDecision(event) {
   const btn = event.target.closest("button[data-sub]");
@@ -396,11 +467,12 @@ async function compare() {
   subsPairs = results.flatMap((r) => r.missing.map((barcode) => ({ chain: r.chain, barcode })));
   suggestions = new Map();
   if (!subsPairs.length) {
-    showResults();
+    showResults("replace");
     return;
   }
 
-  showScreen("screen-subs");
+  // מסך הטעינה של התוצאות מוחלף במסך החלופות, כדי ש"חזרה" ממנו תגיע לבניית הסל
+  showScreen("screen-subs", "replace");
   $("subs").replaceChildren();
   $("btn-to-results").disabled = true;
   $("subs-status").textContent = "מחפשים חלופות ברשתות...";
@@ -410,8 +482,10 @@ async function compare() {
   try {
     if (ask.length) suggestions = await findSubstitutes(ask.map(({ chain, barcode }) => ({ chain_id: chain.chain_id, barcode })));
     $("subs-status").textContent = "";
-  } catch {
-    $("subs-status").textContent = "לא הצלחנו לבדוק חלופות כרגע. אפשר להמשיך לתוצאות עם סל חלקי.";
+  } catch (err) {
+    $("subs-status").textContent = err.rateLimited
+      ? "היו הרבה השוואות בזמן קצר. אפשר להמשיך לתוצאות עם סל חלקי, ולנסות חלופות שוב בעוד כמה דקות."
+      : "לא הצלחנו לבדוק חלופות כרגע. אפשר להמשיך לתוצאות עם סל חלקי.";
   }
   renderSubs(subsPairs);
   $("btn-to-results").disabled = false;
@@ -428,8 +502,8 @@ async function loadJson(path) {
 async function init() {
   try {
     [products, chains] = await Promise.all([
-      loadJson("data/products.json?v=9"),
-      loadJson("data/chains.json?v=9"),
+      loadJson("data/products.json?v=10"),
+      loadJson("data/chains.json?v=10"),
     ]);
   } catch {
     $("products-status").textContent = "לא הצלחנו לטעון את רשימת המוצרים. נסו לרענן את הדף.";
@@ -461,11 +535,8 @@ async function init() {
   $("basket").addEventListener("click", handleClick);
   $("btn-compare").addEventListener("click", compare);
   $("subs").addEventListener("click", handleDecision);
-  $("btn-to-results").addEventListener("click", showResults);
-  $("btn-subs-back").addEventListener("click", () => {
-    showScreen("screen-build");
-    $("btn-compare").focus();
-  });
+  $("btn-to-results").addEventListener("click", () => showResults());
+  $("btn-subs-back").addEventListener("click", goBuild);
   $("btn-clear").addEventListener("click", () => {
     if (!confirm("לנקות את כל הסל?")) return;
     basket.clear();
@@ -473,10 +544,9 @@ async function init() {
     announce("הסל רוקן");
     $("search").focus();
   });
-  $("btn-back").addEventListener("click", () => {
-    showScreen("screen-build");
-    $("btn-compare").focus();
-  });
+  $("btn-back").addEventListener("click", goBuild);
+  history.replaceState({ screen: "screen-build", depth: 0 }, "");
+  window.addEventListener("popstate", handlePopState);
 }
 
 init();

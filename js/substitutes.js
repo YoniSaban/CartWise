@@ -1,6 +1,6 @@
 // קריאה ל-/api/substitutes, ואז השם והמחיר של כל חלופה מ-Supabase.
 // המחיר מגיע רק מ-chain_items, אף פעם לא מהמודל.
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, FUNCTION_URL } from "./config.js?v=9";
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, FUNCTION_URL } from "./config.js?v=10";
 
 // pairs: [{ chain_id, barcode }]. מחזיר [{ chain_id, barcode, suggested_item_code, reason, error? }]
 async function requestSubstitutes(pairs) {
@@ -9,6 +9,7 @@ async function requestSubstitutes(pairs) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ missing: pairs }),
   });
+  if (res.status === 429) throw Object.assign(new Error("rate limited"), { rateLimited: true });
   if (!res.ok) throw new Error(`function ${res.status}`);
   const data = await res.json();
   if (!Array.isArray(data.results)) throw new Error("bad response");
@@ -17,7 +18,7 @@ async function requestSubstitutes(pairs) {
 
 async function fetchItems(chainId, codes) {
   const params = new URLSearchParams({
-    select: "chain_id,item_code,item_name,price",
+    select: "chain_id,item_code,item_name,price,quantity,unit",
     chain_id: `eq.${chainId}`,
     item_code: `in.(${codes.join(",")})`,
   });
@@ -28,7 +29,7 @@ async function fetchItems(chainId, codes) {
   return res.json();
 }
 
-// מחזיר Map "chain:barcode" -> { chain_id, barcode, item: { item_code, item_name, price } | null, reason, error }
+// מחזיר Map "chain:barcode" -> { chain_id, barcode, item: { item_code, item_name, price, quantity, unit } | null, reason, error }
 // חלופה שאין לה מחיר ב-chain_items נחשבת "אין חלופה".
 export async function findSubstitutes(pairs) {
   const results = await requestSubstitutes(pairs);

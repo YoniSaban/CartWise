@@ -38,19 +38,28 @@ export function compareBasket(items, products, chains, rows, approved = new Map(
     const missing = [];
     const substituted = [];
     const weighted = [];
+    // lines: שורה לכל מוצר בסל, לפירוט המחירים. amount באגורות, null למוצר שחסר ברשת
+    const lines = [];
     for (const { barcode, qty } of counted) {
       const p = price(chain, barcode);
       const sub = approved.get(`${chain.chain_id}:${barcode}`);
       if (p != null) {
         // חצי ק"ג יכול לתת חצי אגורה: מעגלים כל שורה לאגורה שלמה
-        total += Math.round(toAgorot(p) * qty);
+        const amount = Math.round(toAgorot(p) * qty);
+        total += amount;
+        lines.push({ barcode, qty, amount, sub: null });
         if (products.get(barcode).unit === "kg") weighted.push({ barcode, qty, perKg: toAgorot(p) });
       } else if (sub) {
-        total += toAgorot(sub.price) * qty;
+        const amount = toAgorot(sub.price) * qty;
+        total += amount;
+        lines.push({ barcode, qty, amount, sub });
         substituted.push({ barcode, item: sub });
-      } else missing.push(barcode);
+      } else {
+        lines.push({ barcode, qty, amount: null, sub: null });
+        missing.push(barcode);
+      }
     }
-    return { chain, total, missing, substituted, weighted, complete: missing.length === 0, cheapest: false };
+    return { chain, total, missing, substituted, weighted, lines, complete: missing.length === 0, cheapest: false };
   });
 
   const complete = results.filter((r) => r.complete);
@@ -63,6 +72,47 @@ export function compareBasket(items, products, chains, rows, approved = new Map(
   // רשתות עם סל מלא קודם, מהזול ליקר. אחריהן החלקיות, מהזול ליקר.
   results.sort((a, b) => (b.complete - a.complete) || (a.total - b.total));
   return { results, notFound };
+}
+
+// גודל אריזה לגרם, מ"ל או יחידה: "1.5 ליטר" -> { amount: 1500, base: "ml" }. לא מזוהה: null
+const UNITS = [
+  [/^(ק"?ג|קג|קילו|קילוגרם|kg)$/i, 1000, "g"],
+  [/^(גרם|גר|ג|g|gr)$/i, 1, "g"],
+  [/^(ליטר|ל|l|lt)$/i, 1000, "ml"],
+  [/^(מ"?ל|מל|מיליליטר|ml)$/i, 1, "ml"],
+];
+export function parseSize(quantity, unit) {
+  const q = Number(quantity);
+  const u = String(unit ?? "").replace(/['׳״]/g, (c) => (c === "״" ? '"' : "")).replace(/\.$/, "").trim();
+  if (!(q > 0) || !u) return null;
+  for (const [re, factor, base] of UNITS) if (re.test(u)) return { amount: q * factor, base };
+  return null;
+}
+
+// גודל של מוצר ברשת, מהעמודות quantity ו-unit של chain_items.
+// ב-unit מופיע הבסיס של מחיר היחידה ("100 גרם", "1ליטר", "קילוגרם"), והכמות בהתאם:
+// "100 גרם" ו-"100 מיליליטר": הכמות בגרם או במ"ל. ליטר וק"ג: לפעמים בליטרים ולפעמים במ"ל,
+// ולכן כמות מעל 20 נחשבת גרם או מ"ל. "יחידות" ו"מטרים": לא משווים, null.
+export function parseChainSize(quantity, unit) {
+  const q = Number(quantity);
+  const u = String(unit ?? "");
+  if (!(q > 0)) return null;
+  const base = /גרם|קילו/.test(u) ? "g" : /מיליליטר|ליטר/.test(u) ? "ml" : null;
+  if (!base) return null;
+  const big = /קילו|(^|[^י])ליטר/.test(u) && !/מיליליטר/.test(u);
+  return { amount: big && q <= 20 ? q * 1000 : q, base };
+}
+
+// "850 גרם" -> parseSize(850, "גרם")
+export function parseSizeText(text) {
+  const m = String(text ?? "").match(/^([\d.]+)\s*(.+)$/);
+  return m ? parseSize(m[1], m[2]) : null;
+}
+
+// מחיר ל-100 גרם או ל-100 מ"ל, באגורות. גודל לא מזוהה: null
+export function unitPrice(price, size) {
+  if (!size) return null;
+  return Math.round((toAgorot(price) * 100) / size.amount);
 }
 
 // 5490 -> "₪ 54.90"

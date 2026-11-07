@@ -21,6 +21,23 @@ const MAX_REASON = 120;
 // תשובה איטית מהמודל נחשבת כשל, כדי שהמשתמש לא יחכה דקות
 const GEMINI_TIMEOUT_MS = 30000;
 
+// הגבלת בקשות: עד 20 בקשות ל-10 דקות מכל כתובת IP, כדי שאף אחד לא יגמור את המכסה של Gemini.
+// הספירה בזיכרון של מופע הפונקציה: הגנה בסיסית, לא מושלמת (מופע חדש מתחיל מאפס).
+const RATE_LIMIT = 20;
+const RATE_WINDOW_MS = 10 * 60 * 1000;
+const hits = new Map();
+
+function rateLimited(req) {
+  const ip = String(req.headers["x-forwarded-for"] || req.headers["x-real-ip"] || "unknown").split(",")[0].trim();
+  const now = Date.now();
+  const recent = (hits.get(ip) || []).filter((t) => now - t < RATE_WINDOW_MS);
+  recent.push(now);
+  hits.set(ip, recent);
+  // ניקוי כתובות ישנות, כדי שהזיכרון לא יגדל בלי סוף
+  if (hits.size > 5000) for (const [k, v] of hits) if (now - v[v.length - 1] >= RATE_WINDOW_MS) hits.delete(k);
+  return recent.length > RATE_LIMIT;
+}
+
 const byBarcode = new Map(products.map((p) => [p.barcode, p]));
 const chainIds = new Set(chains.map((c) => c.chain_id));
 
@@ -269,6 +286,10 @@ export default async function handler(req, res) {
   }
   if (req.method !== "POST") {
     return res.status(405).json({ error: "רק POST" });
+  }
+  if (rateLimited(req)) {
+    res.setHeader("Retry-After", String(RATE_WINDOW_MS / 1000));
+    return res.status(429).json({ error: "יותר מדי בקשות. נסו שוב בעוד כמה דקות" });
   }
 
   const pairs = parsePairs(req.body);
