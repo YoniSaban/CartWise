@@ -498,7 +498,10 @@
     "chain_codes": {
       "shufersal": "7290000964775",
       "tiv_taam": "4412616",
-      "wolt": "7290101503583"
+      "wolt": "7290101503583",
+      "rami_levi": "7290000000134",
+      "ampm": "7290000041148",
+      "carrefour": "1556"
     },
     "image": "assets/products/998000000001.svg"
   },
@@ -514,7 +517,10 @@
     "chain_codes": {
       "shufersal": "7290000000480",
       "tiv_taam": "9913019",
-      "wolt": "7290101503606"
+      "wolt": "7290101503606",
+      "rami_levi": "7290000000108",
+      "ampm": "7290000043166",
+      "carrefour": "1519"
     },
     "image": "assets/products/998000000002.svg"
   },
@@ -530,7 +536,10 @@
     "chain_codes": {
       "shufersal": "7290000000138",
       "tiv_taam": "4412852",
-      "wolt": "8004643753523"
+      "wolt": "8004643753523",
+      "rami_levi": "7290000000109",
+      "ampm": "40417",
+      "carrefour": "1505"
     },
     "image": "assets/products/998000000003.svg"
   },
@@ -546,7 +555,10 @@
     ],
     "chain_codes": {
       "shufersal": "7290000000046",
-      "wolt": "7290101503644"
+      "wolt": "7290101503644",
+      "rami_levi": "7290000000101",
+      "ampm": "40363",
+      "carrefour": "1502"
     },
     "image": "assets/products/998000000004.svg"
   },
@@ -564,7 +576,10 @@
     "chain_codes": {
       "shufersal": "7290000000022",
       "tiv_taam": "4412784",
-      "wolt": "7290101503675"
+      "wolt": "7290101503675",
+      "rami_levi": "7290000000100",
+      "ampm": "40349",
+      "carrefour": "1501"
     },
     "image": "assets/products/998000000005.svg"
   },
@@ -580,7 +595,10 @@
     "chain_codes": {
       "shufersal": "7290000000091",
       "tiv_taam": "9913002",
-      "wolt": "7290101503682"
+      "wolt": "7290101503682",
+      "rami_levi": "7290000000104",
+      "ampm": "7290000040707",
+      "carrefour": "1516"
     },
     "image": "assets/products/998000000006.svg"
   },
@@ -598,7 +616,10 @@
     "chain_codes": {
       "shufersal": "7290000000596",
       "tiv_taam": "7290018825211",
-      "wolt": "7290018825822"
+      "wolt": "7290018825822",
+      "rami_levi": "7290000000422",
+      "ampm": "7290000040905",
+      "carrefour": "1494"
     },
     "image": "assets/products/998000000007.svg"
   },
@@ -615,7 +636,10 @@
     ],
     "chain_codes": {
       "shufersal": "7290009137507",
-      "wolt": "7290018758267"
+      "wolt": "7290018758267",
+      "rami_levi": "7290000000116",
+      "ampm": "7290000041230",
+      "carrefour": "1564"
     },
     "image": "assets/products/998000000008.svg"
   },
@@ -763,7 +787,9 @@
     "chain_codes": {
       "shufersal": "7290000933740",
       "tiv_taam": "6355300",
-      "wolt": "7290004281991"
+      "wolt": "7290004281991",
+      "rami_levi": "7290003187843",
+      "carrefour": "7290000009350"
     },
     "image": "assets/products/998000000009.svg"
   },
@@ -781,7 +807,8 @@
     "chain_codes": {
       "shufersal": "7290009011043",
       "tiv_taam": "8881388",
-      "wolt": "7290002042907"
+      "wolt": "7290002042907",
+      "carrefour": "7290000618083"
     },
     "image": "assets/products/998000000010.svg"
   },
@@ -798,7 +825,8 @@
     "chain_codes": {
       "shufersal": "7290000616827",
       "tiv_taam": "7290010619054",
-      "wolt": "7290004485207"
+      "wolt": "7290004485207",
+      "carrefour": "3502"
     },
     "image": "assets/products/998000000011.svg"
   },
@@ -815,7 +843,8 @@
     "chain_codes": {
       "shufersal": "7290001303436",
       "tiv_taam": "6520531",
-      "wolt": "7290004485191"
+      "wolt": "7290004485191",
+      "carrefour": "3500"
     },
     "image": "assets/products/998000000012.svg"
   },

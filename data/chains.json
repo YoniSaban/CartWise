@@ -5,7 +5,8 @@
     "store_id": "001",
     "store_name": "שלי בן יהודה 79",
     "city": "תל אביב",
-    "chain_code": "7290027600007"
+    "chain_code": "7290027600007",
+    "logo": "assets/chains/shufersal.png"
   },
   {
     "chain_id": "tiv_taam",
@@ -13,7 +14,8 @@
     "store_id": "019",
     "store_name": "רמת החייל, דבורה הנביאה 122",
     "city": "תל אביב",
-    "chain_code": "7290873255550"
+    "chain_code": "7290873255550",
+    "logo": "assets/chains/tiv_taam.png"
   },
   {
     "chain_id": "wolt",
@@ -21,6 +23,34 @@
     "store_id": "025",
     "store_name": "בן יהודה 19",
     "city": "תל אביב",
-    "chain_code": "7290058249350"
+    "chain_code": "7290058249350",
+    "logo": "assets/chains/wolt.png"
+  },
+  {
+    "chain_id": "rami_levi",
+    "name": "רמי לוי",
+    "store_id": "733",
+    "store_name": "בן יהודה 23",
+    "city": "תל אביב",
+    "chain_code": "7290058140886",
+    "logo": "assets/chains/rami_levi.png"
+  },
+  {
+    "chain_id": "ampm",
+    "name": "AM:PM",
+    "store_id": "524",
+    "store_name": "בן יהודה 61",
+    "city": "תל אביב",
+    "chain_code": "7290492000005",
+    "logo": "assets/chains/ampm.png"
+  },
+  {
+    "chain_id": "carrefour",
+    "name": "קרפור",
+    "store_id": "402",
+    "store_name": "דיזנגוף 65",
+    "city": "תל אביב",
+    "chain_code": "7290055700007",
+    "logo": "assets/chains/carrefour.png"
   }
 ]

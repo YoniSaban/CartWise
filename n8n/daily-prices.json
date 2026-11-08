@@ -811,7 +811,7 @@
         750
       ],
       "parameters": {
-        "jsCode": "// מחוץ ל-09:00 עד 18:00 שעון ישראל לא עושים כלום. אחרת, פריט לכל רשת\nconst hour = Number(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem', hour: '2-digit', hour12: false }));\nif (hour < 9 || hour >= 18) return [];\n// n8n עלה סמוך לשעה עגולה: הבדיקה של השעה העגולה תעשה את העדכון, כדי שלא ירוצו שני עדכונים באותו יום\nconst minute = new Date().getMinutes();\nif ($('n8n עלה').isExecuted && (minute >= 57 || minute <= 2)) return [];\nreturn ['shufersal', 'wolt', 'tiv_taam'].map((chain) => ({ json: { chain } }));"
+        "jsCode": "// מחוץ ל-09:00 עד 18:00 שעון ישראל לא עושים כלום. אחרת, פריט לכל רשת\nconst hour = Number(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem', hour: '2-digit', hour12: false }));\nif (hour < 9 || hour >= 18) return [];\n// n8n עלה סמוך לשעה עגולה: הבדיקה של השעה העגולה תעשה את העדכון, כדי שלא ירוצו שני עדכונים באותו יום\nconst minute = new Date().getMinutes();\nif ($('n8n עלה').isExecuted && (minute >= 57 || minute <= 2)) return [];\nreturn ['shufersal', 'wolt', 'tiv_taam', 'rami_levi', 'ampm', 'carrefour'].map((chain) => ({ json: { chain } }));"
       },
       "id": "n102"
     },
@@ -865,8 +865,8 @@
       ],
       "parameters": {
         "mode": "expression",
-        "numberOutputs": 3,
-        "output": "={{ ['shufersal', 'wolt', 'tiv_taam'].indexOf($json.chain) }}"
+        "numberOutputs": 6,
+        "output": "={{ ['shufersal', 'wolt', 'tiv_taam', 'rami_levi', 'ampm', 'carrefour'].indexOf($json.chain) }}"
       },
       "id": "n105"
     },
@@ -908,6 +908,963 @@
         "jsCode": "// הענף נכשל: לא נכתב כלום, והמחירים הקודמים נשארים. ההודעה נשמרת ביומן ההרצות\nreturn [{ json: { chain: 'tiv_taam', failed_at: new Date().toISOString(), error: $input.first().json.error || $input.first().json } }];"
       },
       "id": "n108"
+    },
+    {
+      "id": "n200",
+      "name": "רמי לוי: דף כניסה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        1100
+      ],
+      "parameters": {
+        "url": "https://url.publishedprices.co.il/login",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "n201",
+      "name": "רמי לוי: אסימון כניסה",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        1100
+      ],
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst token = ((r.data || r.body || \"\").match(/name=\"csrftoken\" content=\"([^\"]+)\"/) || [])[1];\nconst sc = [].concat(r.headers['set-cookie'] || []);\nconst cookie = sc.map((c) => c.split(';')[0]).join('; ');\nif (!token) throw new Error('לא נמצא csrftoken בדף הכניסה');\nreturn [{ json: { token, cookie } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n202",
+      "name": "רמי לוי: כניסה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        1100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://url.publishedprices.co.il/login/user",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "r",
+              "value": ""
+            },
+            {
+              "name": "username",
+              "value": "RamiLevi"
+            },
+            {
+              "name": "password",
+              "value": ""
+            },
+            {
+              "name": "Submit",
+              "value": "Sign in"
+            },
+            {
+              "name": "csrftoken",
+              "value": "={{ $json.token }}"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "n203",
+      "name": "רמי לוי: עוגיית חיבור",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        1100
+      ],
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst prev = $('רמי לוי: אסימון כניסה').first().json.cookie;\nconst sc = [].concat(r.headers['set-cookie'] || []).map((c) => c.split(';')[0]);\nconst jar = {};\nfor (const c of prev.split('; ').concat(sc)) { const [k, ...v] = c.split('='); if (k) jar[k] = v.join('='); }\nconst location = r.headers.location || '';\nif (location.includes('login')) throw new Error('הכניסה ל-Cerberus נכשלה (רמי לוי). בדוק את שם המשתמש RamiLevi');\nreturn [{ json: { cookie: Object.entries(jar).map(([k, v]) => k + '=' + v).join('; ') } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n204",
+      "name": "רמי לוי: דף קבצים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        1100
+      ],
+      "parameters": {
+        "url": "https://url.publishedprices.co.il/file",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "n205",
+      "name": "רמי לוי: אסימון קבצים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        1100
+      ],
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data;\nconst token = (html.match(/name=\"csrftoken\" content=\"([^\"]+)\"/) || [])[1];\nif (!token) throw new Error('לא נמצא csrftoken בדף הקבצים. כנראה שהכניסה נכשלה');\nreturn [{ json: { token, cookie: $('רמי לוי: עוגיית חיבור').first().json.cookie } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n206",
+      "name": "רמי לוי: חיפוש קבצים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        1100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://url.publishedprices.co.il/file/json/dir",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "sSearch",
+              "value": "PriceFull7290058140886-"
+            },
+            {
+              "name": "iDisplayLength",
+              "value": "100000"
+            },
+            {
+              "name": "csrftoken",
+              "value": "={{ $json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "n207",
+      "name": "רמי לוי: הקובץ העדכני",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        1100
+      ],
+      "parameters": {
+        "jsCode": "// שמות הקבצים ב-Cerberus לפעמים באותיות קטנות (pricefull), ולכן בלי תלות ברישיות\nconst list = ($input.first().json.aaData || []).map((f) => f.fname).filter((n) => /^pricefull7290058140886-\\d{3}-733-/i.test(n)).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));\nif (!list.length) throw new Error('לא נמצא קובץ מתאים ב-Cerberus');\nreturn [{ json: { url: 'https://url.publishedprices.co.il/file/d/' + list[list.length - 1], cookie: $('רמי לוי: אסימון קבצים').first().json.cookie } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n208",
+      "name": "רמי לוי: הורדה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3080,
+        1100
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "n209",
+      "name": "רמי לוי: שם קובץ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3300,
+        1100
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nitem.binary.data.fileName = 'pricefull.xml.gz';\nitem.binary.data.fileExtension = 'gz';\nitem.binary.data.mimeType = 'application/gzip';\nreturn [item];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n210",
+      "name": "רמי לוי: פריסת gz",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        3520,
+        1100
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n211",
+      "name": "רמי לוי: קריאת XML",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        3740,
+        1100
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_0",
+        "destinationKey": "data",
+        "options": {}
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n212",
+      "name": "רמי לוי: מיפוי וסינון",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3960,
+        1100
+      ],
+      "parameters": {
+        "jsCode": "// קורא את קובץ ה-PriceFull, מסנן מוצרים במשקל, ומחלק למנות של 1,000\n// חוץ מהמוצרים במשקל שבסל (WEIGHTED): הם נשמרים, עם מחיר לק\"ג ב-price_per_kg\nconst WEIGHTED = new Set([\n  '7290000000134', // בננות\n  '7290000000108', // בצל יבש\n  '7290000000109', // כרוב לבן\n  '7290000000101', // מלפפונים\n  '7290000000100', // עגבניות\n  '7290000000104', // פלפל אדום\n  '7290000000422', // תפוחי אדמה\n  '7290000000116', // תפוחי עץ גרני סמית\n  '7290003187843', // בשר בקר טחון\n]);\nconst xml = $input.first().json.data;\nconst loadedAt = new Date().toISOString();\nconst seen = new Set();\nconst rows = [];\nconst re = /<Item>([\\s\\S]*?)<\\/Item>/g;\nlet m;\nwhile ((m = re.exec(xml))) {\n  const s = m[1];\n  const g = (t) => {\n    const r = s.match(new RegExp('<' + t + '>([\\\\s\\\\S]*?)</' + t + '>', 'i'));\n    return r ? r[1].trim() : '';\n  };\n  const code = g('ItemCode');\n  const price = parseFloat(g('ItemPrice'));\n  const weighted = (g('bIsWeighted') || g('blsWeighted')) === '1';\n  const kg = WEIGHTED.has(code);\n  if (!code || (weighted && !kg) || !(price > 0) || seen.has(code)) continue;\n  // מוצר במשקל: המחיר בקובץ הוא לק\"ג. אריזה במשקל משוער (וולט): המחיר חלקי משקל האריזה\n  let perKg = null;\n  if (kg) {\n    const q = parseFloat(g('Quantity'));\n    const unitQty = g('UnitQty');\n    const kgInPack = /קילו|ק\"ג/.test(unitQty) ? q : /גרם/.test(unitQty) ? q / 1000 : null;\n    perKg = weighted ? price : kgInPack > 0 ? Math.round((price / kgInPack) * 100) / 100 : null;\n  }\n  seen.add(code);\n  const updated = g('PriceUpdateTime').replace(' ', 'T');\n  rows.push({\n    chain_id: 'rami_levi',\n    item_code: code,\n    item_name: g('ItemName').replace(/\\s+/g, ' '),\n    manufacturer: g('ManufactureName') || null,\n    quantity: parseFloat(g('Quantity')) || null,\n    unit: g('UnitOfMeasure') || g('UnitQty') || null,\n    price,\n    price_per_kg: perKg,\n    price_updated_at: updated || null,\n    loaded_at: loadedAt,\n  });\n}\nif (rows.length < 1000) throw new Error('נמצאו רק ' + rows.length + ' מוצרים בקובץ. לא כותבים כלום.');\n// קוד של מוצר במשקל שלא נמצא בקובץ: המוצר יופיע כחסר ברשת. הרשימה נשמרת ביומן ההרצה\nconst missingWeighted = [...WEIGHTED].filter((c) => !seen.has(c));\nif (missingWeighted.length) console.log('רמי לוי: מוצרים במשקל שלא נמצאו:', missingWeighted.join(', '));\nconst batches = [];\nfor (let i = 0; i < rows.length; i += 1000) batches.push({ json: { rows: rows.slice(i, i + 1000) } });\nif (batches.length) batches[0].json.missing_weighted = missingWeighted;\nreturn batches;"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n213",
+      "name": "רמי לוי: upsert ל-Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4180,
+        1100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/chain_items?on_conflict=chain_id,item_code",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json.rows) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 200
+            }
+          }
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "n214",
+      "name": "רמי לוי: נכשל",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        1280
+      ],
+      "parameters": {
+        "jsCode": "// הענף נכשל: לא נכתב כלום, והמחירים הקודמים נשארים. ההודעה נשמרת ביומן ההרצות\nreturn [{ json: { chain: 'rami_levi', failed_at: new Date().toISOString(), error: $input.first().json.error || $input.first().json } }];"
+      }
+    },
+    {
+      "id": "n220",
+      "name": "AM:PM: דף כניסה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        1500
+      ],
+      "parameters": {
+        "url": "https://url.publishedprices.co.il/login",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "n221",
+      "name": "AM:PM: אסימון כניסה",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        1500
+      ],
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst token = ((r.data || r.body || \"\").match(/name=\"csrftoken\" content=\"([^\"]+)\"/) || [])[1];\nconst sc = [].concat(r.headers['set-cookie'] || []);\nconst cookie = sc.map((c) => c.split(';')[0]).join('; ');\nif (!token) throw new Error('לא נמצא csrftoken בדף הכניסה');\nreturn [{ json: { token, cookie } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n222",
+      "name": "AM:PM: כניסה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        1500
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://url.publishedprices.co.il/login/user",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "r",
+              "value": ""
+            },
+            {
+              "name": "username",
+              "value": "doralon"
+            },
+            {
+              "name": "password",
+              "value": ""
+            },
+            {
+              "name": "Submit",
+              "value": "Sign in"
+            },
+            {
+              "name": "csrftoken",
+              "value": "={{ $json.token }}"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "n223",
+      "name": "AM:PM: עוגיית חיבור",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        1500
+      ],
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst prev = $('AM:PM: אסימון כניסה').first().json.cookie;\nconst sc = [].concat(r.headers['set-cookie'] || []).map((c) => c.split(';')[0]);\nconst jar = {};\nfor (const c of prev.split('; ').concat(sc)) { const [k, ...v] = c.split('='); if (k) jar[k] = v.join('='); }\nconst location = r.headers.location || '';\nif (location.includes('login')) throw new Error('הכניסה ל-Cerberus נכשלה (AM:PM). בדוק את שם המשתמש doralon');\nreturn [{ json: { cookie: Object.entries(jar).map(([k, v]) => k + '=' + v).join('; ') } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n224",
+      "name": "AM:PM: דף קבצים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        1500
+      ],
+      "parameters": {
+        "url": "https://url.publishedprices.co.il/file",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "n225",
+      "name": "AM:PM: אסימון קבצים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        1500
+      ],
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data;\nconst token = (html.match(/name=\"csrftoken\" content=\"([^\"]+)\"/) || [])[1];\nif (!token) throw new Error('לא נמצא csrftoken בדף הקבצים. כנראה שהכניסה נכשלה');\nreturn [{ json: { token, cookie: $('AM:PM: עוגיית חיבור').first().json.cookie } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n226",
+      "name": "AM:PM: חיפוש קבצים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        1500
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://url.publishedprices.co.il/file/json/dir",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "sSearch",
+              "value": "PriceFull7290492000005-"
+            },
+            {
+              "name": "iDisplayLength",
+              "value": "100000"
+            },
+            {
+              "name": "csrftoken",
+              "value": "={{ $json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "n227",
+      "name": "AM:PM: הקובץ העדכני",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        1500
+      ],
+      "parameters": {
+        "jsCode": "// שמות הקבצים ב-Cerberus לפעמים באותיות קטנות (pricefull), ולכן בלי תלות ברישיות\nconst list = ($input.first().json.aaData || []).map((f) => f.fname).filter((n) => /^pricefull7290492000005-\\d{3}-524-/i.test(n)).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));\nif (!list.length) throw new Error('לא נמצא קובץ מתאים ב-Cerberus');\nreturn [{ json: { url: 'https://url.publishedprices.co.il/file/d/' + list[list.length - 1], cookie: $('AM:PM: אסימון קבצים').first().json.cookie } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n228",
+      "name": "AM:PM: הורדה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3080,
+        1500
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "n229",
+      "name": "AM:PM: שם קובץ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3300,
+        1500
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nitem.binary.data.fileName = 'pricefull.xml.gz';\nitem.binary.data.fileExtension = 'gz';\nitem.binary.data.mimeType = 'application/gzip';\nreturn [item];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n230",
+      "name": "AM:PM: פריסת gz",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        3520,
+        1500
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n231",
+      "name": "AM:PM: קריאת XML",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        3740,
+        1500
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_0",
+        "destinationKey": "data",
+        "options": {}
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n232",
+      "name": "AM:PM: מיפוי וסינון",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3960,
+        1500
+      ],
+      "parameters": {
+        "jsCode": "// קורא את קובץ ה-PriceFull, מסנן מוצרים במשקל, ומחלק למנות של 1,000\n// חוץ מהמוצרים במשקל שבסל (WEIGHTED): הם נשמרים, עם מחיר לק\"ג ב-price_per_kg\nconst WEIGHTED = new Set([\n  '7290000041148', // בננות\n  '7290000043166', // בצל יבש\n  '40417', // כרוב לבן\n  '40363', // מלפפונים\n  '40349', // עגבניות\n  '7290000040707', // פלפל אדום\n  '7290000040905', // תפוחי אדמה\n  '7290000041230', // תפוחי עץ גרני סמית\n]);\nconst xml = $input.first().json.data;\nconst loadedAt = new Date().toISOString();\nconst seen = new Set();\nconst rows = [];\nconst re = /<Item>([\\s\\S]*?)<\\/Item>/g;\nlet m;\nwhile ((m = re.exec(xml))) {\n  const s = m[1];\n  const g = (t) => {\n    const r = s.match(new RegExp('<' + t + '>([\\\\s\\\\S]*?)</' + t + '>', 'i'));\n    return r ? r[1].trim() : '';\n  };\n  const code = g('ItemCode');\n  const price = parseFloat(g('ItemPrice'));\n  const weighted = (g('bIsWeighted') || g('blsWeighted')) === '1';\n  const kg = WEIGHTED.has(code);\n  if (!code || (weighted && !kg) || !(price > 0) || seen.has(code)) continue;\n  // מוצר במשקל: המחיר בקובץ הוא לק\"ג. אריזה במשקל משוער (וולט): המחיר חלקי משקל האריזה\n  let perKg = null;\n  if (kg) {\n    const q = parseFloat(g('Quantity'));\n    const unitQty = g('UnitQty');\n    const kgInPack = /קילו|ק\"ג/.test(unitQty) ? q : /גרם/.test(unitQty) ? q / 1000 : null;\n    perKg = weighted ? price : kgInPack > 0 ? Math.round((price / kgInPack) * 100) / 100 : null;\n  }\n  seen.add(code);\n  const updated = g('PriceUpdateTime').replace(' ', 'T');\n  rows.push({\n    chain_id: 'ampm',\n    item_code: code,\n    item_name: g('ItemName').replace(/\\s+/g, ' '),\n    manufacturer: g('ManufactureName') || null,\n    quantity: parseFloat(g('Quantity')) || null,\n    unit: g('UnitOfMeasure') || g('UnitQty') || null,\n    price,\n    price_per_kg: perKg,\n    price_updated_at: updated || null,\n    loaded_at: loadedAt,\n  });\n}\nif (rows.length < 1000) throw new Error('נמצאו רק ' + rows.length + ' מוצרים בקובץ. לא כותבים כלום.');\n// קוד של מוצר במשקל שלא נמצא בקובץ: המוצר יופיע כחסר ברשת. הרשימה נשמרת ביומן ההרצה\nconst missingWeighted = [...WEIGHTED].filter((c) => !seen.has(c));\nif (missingWeighted.length) console.log('AM:PM: מוצרים במשקל שלא נמצאו:', missingWeighted.join(', '));\nconst batches = [];\nfor (let i = 0; i < rows.length; i += 1000) batches.push({ json: { rows: rows.slice(i, i + 1000) } });\nif (batches.length) batches[0].json.missing_weighted = missingWeighted;\nreturn batches;"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n233",
+      "name": "AM:PM: upsert ל-Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4180,
+        1500
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/chain_items?on_conflict=chain_id,item_code",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json.rows) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 200
+            }
+          }
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "n234",
+      "name": "AM:PM: נכשל",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        1680
+      ],
+      "parameters": {
+        "jsCode": "// הענף נכשל: לא נכתב כלום, והמחירים הקודמים נשארים. ההודעה נשמרת ביומן ההרצות\nreturn [{ json: { chain: 'ampm', failed_at: new Date().toISOString(), error: $input.first().json.error || $input.first().json } }];"
+      }
+    },
+    {
+      "id": "n240",
+      "name": "קרפור: דף הקבצים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        1900
+      ],
+      "parameters": {
+        "url": "https://prices.carrefour.co.il/",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "n241",
+      "name": "קרפור: הקובץ העדכני",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        1900
+      ],
+      "parameters": {
+        "jsCode": "// בדף הראשי רשימת הקבצים של היום נמצאת בתוך הסקריפט: const path = '20261108' ו-const files = [...]\nconst html = $input.first().json.data;\nconst path = (html.match(/const path = '([^']+)'/) || [])[1];\nconst raw = (html.match(/const files = (\\[[\\s\\S]*?\\]);/) || [])[1];\nif (!path || !raw) throw new Error('לא נמצאה רשימת הקבצים בדף של קרפור');\nconst list = JSON.parse(raw).map((f) => f.name).filter((n) => /^pricefull7290055700007-\\d{3}-402-/i.test(n)).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));\nif (!list.length) throw new Error('לא נמצא קובץ PriceFull של סניף 402 בדף של היום');\nreturn [{ json: { url: 'https://prices.carrefour.co.il/' + path + '/' + list[list.length - 1] } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n242",
+      "name": "קרפור: הורדה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        1900
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "n243",
+      "name": "קרפור: שם קובץ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        1900
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nitem.binary.data.fileName = 'pricefull.xml.gz';\nitem.binary.data.fileExtension = 'gz';\nitem.binary.data.mimeType = 'application/gzip';\nreturn [item];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n244",
+      "name": "קרפור: פריסת gz",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        2200,
+        1900
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n245",
+      "name": "קרפור: קריאת XML",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        2420,
+        1900
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_0",
+        "destinationKey": "data",
+        "options": {}
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n246",
+      "name": "קרפור: מיפוי וסינון",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        1900
+      ],
+      "parameters": {
+        "jsCode": "// קורא את קובץ ה-PriceFull, מסנן מוצרים במשקל, ומחלק למנות של 1,000\n// חוץ מהמוצרים במשקל שבסל (WEIGHTED): הם נשמרים, עם מחיר לק\"ג ב-price_per_kg\nconst WEIGHTED = new Set([\n  '1556', // בננות\n  '1519', // בצל יבש\n  '1505', // כרוב לבן\n  '1502', // מלפפונים\n  '1501', // עגבניות\n  '1516', // פלפל אדום\n  '1494', // תפוחי אדמה\n  '1564', // תפוחי עץ גרני סמית\n  '7290000009350', // בשר בקר טחון\n  '7290000618083', // פילה אמנון\n  '3502', // חזה עוף\n  '3500', // עוף שלם טרי\n]);\nconst xml = $input.first().json.data;\nconst loadedAt = new Date().toISOString();\nconst seen = new Set();\nconst rows = [];\nconst re = /<Item>([\\s\\S]*?)<\\/Item>/g;\nlet m;\nwhile ((m = re.exec(xml))) {\n  const s = m[1];\n  const g = (t) => {\n    const r = s.match(new RegExp('<' + t + '>([\\\\s\\\\S]*?)</' + t + '>', 'i'));\n    return r ? r[1].trim() : '';\n  };\n  const code = g('ItemCode');\n  const price = parseFloat(g('ItemPrice'));\n  const weighted = (g('bIsWeighted') || g('blsWeighted')) === '1';\n  const kg = WEIGHTED.has(code);\n  if (!code || (weighted && !kg) || !(price > 0) || seen.has(code)) continue;\n  // מוצר במשקל: המחיר בקובץ הוא לק\"ג. אריזה במשקל משוער (וולט): המחיר חלקי משקל האריזה\n  let perKg = null;\n  if (kg) {\n    const q = parseFloat(g('Quantity'));\n    const unitQty = g('UnitQty');\n    const kgInPack = /קילו|ק\"ג/.test(unitQty) ? q : /גרם/.test(unitQty) ? q / 1000 : null;\n    perKg = weighted ? price : kgInPack > 0 ? Math.round((price / kgInPack) * 100) / 100 : null;\n  }\n  seen.add(code);\n  const updated = g('PriceUpdateTime').replace(' ', 'T');\n  rows.push({\n    chain_id: 'carrefour',\n    item_code: code,\n    item_name: g('ItemName').replace(/\\s+/g, ' '),\n    manufacturer: g('ManufactureName') || null,\n    quantity: parseFloat(g('Quantity')) || null,\n    unit: g('UnitOfMeasure') || g('UnitQty') || null,\n    price,\n    price_per_kg: perKg,\n    price_updated_at: updated || null,\n    loaded_at: loadedAt,\n  });\n}\nif (rows.length < 1000) throw new Error('נמצאו רק ' + rows.length + ' מוצרים בקובץ. לא כותבים כלום.');\n// קוד של מוצר במשקל שלא נמצא בקובץ: המוצר יופיע כחסר ברשת. הרשימה נשמרת ביומן ההרצה\nconst missingWeighted = [...WEIGHTED].filter((c) => !seen.has(c));\nif (missingWeighted.length) console.log('קרפור: מוצרים במשקל שלא נמצאו:', missingWeighted.join(', '));\nconst batches = [];\nfor (let i = 0; i < rows.length; i += 1000) batches.push({ json: { rows: rows.slice(i, i + 1000) } });\nif (batches.length) batches[0].json.missing_weighted = missingWeighted;\nreturn batches;"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "n247",
+      "name": "קרפור: upsert ל-Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2860,
+        1900
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/chain_items?on_conflict=chain_id,item_code",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json.rows) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 200
+            }
+          }
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "n248",
+      "name": "קרפור: נכשל",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        2080
+      ],
+      "parameters": {
+        "jsCode": "// הענף נכשל: לא נכתב כלום, והמחירים הקודמים נשארים. ההודעה נשמרת ביומן ההרצות\nreturn [{ json: { chain: 'carrefour', failed_at: new Date().toISOString(), error: $input.first().json.error || $input.first().json } }];"
+      }
     }
   ],
   "connections": {
@@ -926,6 +1883,21 @@
           },
           {
             "node": "טיב טעם: דף כניסה",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "רמי לוי: דף כניסה",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AM:PM: דף כניסה",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "קרפור: דף הקבצים",
             "type": "main",
             "index": 0
           }
@@ -1565,6 +2537,657 @@
         [
           {
             "node": "טיב טעם: דף כניסה",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: דף כניסה",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: דף כניסה",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "קרפור: דף הקבצים",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: דף כניסה": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: אסימון כניסה",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: אסימון כניסה": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: כניסה",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: כניסה": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: עוגיית חיבור",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: עוגיית חיבור": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: דף קבצים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: דף קבצים": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: אסימון קבצים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: אסימון קבצים": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: חיפוש קבצים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: חיפוש קבצים": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: הקובץ העדכני",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: הקובץ העדכני": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: הורדה",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: הורדה": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: שם קובץ",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: שם קובץ": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: פריסת gz",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: פריסת gz": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: קריאת XML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: קריאת XML": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: מיפוי וסינון",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: מיפוי וסינון": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: upsert ל-Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: upsert ל-Supabase": {
+      "main": [
+        [],
+        [
+          {
+            "node": "רמי לוי: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: דף כניסה": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: אסימון כניסה",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: אסימון כניסה": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: כניסה",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: כניסה": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: עוגיית חיבור",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: עוגיית חיבור": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: דף קבצים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: דף קבצים": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: אסימון קבצים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: אסימון קבצים": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: חיפוש קבצים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: חיפוש קבצים": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: הקובץ העדכני",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: הקובץ העדכני": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: הורדה",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: הורדה": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: שם קובץ",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: שם קובץ": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: פריסת gz",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: פריסת gz": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: קריאת XML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: קריאת XML": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: מיפוי וסינון",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: מיפוי וסינון": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: upsert ל-Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: upsert ל-Supabase": {
+      "main": [
+        [],
+        [
+          {
+            "node": "AM:PM: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קרפור: דף הקבצים": {
+      "main": [
+        [
+          {
+            "node": "קרפור: הקובץ העדכני",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "קרפור: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קרפור: הקובץ העדכני": {
+      "main": [
+        [
+          {
+            "node": "קרפור: הורדה",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "קרפור: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קרפור: הורדה": {
+      "main": [
+        [
+          {
+            "node": "קרפור: שם קובץ",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "קרפור: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קרפור: שם קובץ": {
+      "main": [
+        [
+          {
+            "node": "קרפור: פריסת gz",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "קרפור: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קרפור: פריסת gz": {
+      "main": [
+        [
+          {
+            "node": "קרפור: קריאת XML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "קרפור: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קרפור: קריאת XML": {
+      "main": [
+        [
+          {
+            "node": "קרפור: מיפוי וסינון",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "קרפור: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קרפור: מיפוי וסינון": {
+      "main": [
+        [
+          {
+            "node": "קרפור: upsert ל-Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "קרפור: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קרפור: upsert ל-Supabase": {
+      "main": [
+        [],
+        [
+          {
+            "node": "קרפור: נכשל",
             "type": "main",
             "index": 0
           }

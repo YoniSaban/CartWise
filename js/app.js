@@ -266,6 +266,12 @@ function renderResults({ results, notFound }, counted) {
   for (const r of results) {
     const li = el("li", { class: r.cheapest ? "card result cheapest" : "card result" });
     const head = el("div", { class: "result-head" });
+    // הלוגו דקורטיבי: השם נשאר לידו. לוגו שלא נטען מוסתר
+    if (r.chain.logo) {
+      const logo = el("img", { class: "chain-logo", src: r.chain.logo, alt: "", width: 96, height: 28 });
+      logo.addEventListener("error", () => { logo.hidden = true; });
+      head.append(logo);
+    }
     head.append(el("h3", { class: "chain-name" }, r.chain.name));
     if (r.cheapest) head.append(el("span", { class: "tag tag-cheapest" }, "✓ הזול ביותר"));
     if (r.substituted.length) head.append(el("span", { class: "tag tag-sub" }, "⇄ חלופה"));
@@ -506,8 +512,8 @@ async function loadJson(path) {
 async function init() {
   try {
     [products, chains] = await Promise.all([
-      loadJson("data/products.json?v=11"),
-      loadJson("data/chains.json?v=11"),
+      loadJson("data/products.json?v=12"),
+      loadJson("data/chains.json?v=13"),
     ]);
   } catch {
     $("products-status").textContent = "לא הצלחנו לטעון את רשימת המוצרים. נסו לרענן את הדף.";

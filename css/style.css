@@ -329,10 +329,12 @@ h1:focus { outline: none; }
 
 .card.result { display: grid; grid-template-columns: 100%; gap: 2px; align-items: start; padding: 16px; }
 
-.result-head { display: flex; align-items: center; gap: 8px; }
+.result-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
 /* התגיות בצד השני של השורה, יחד */
 .result-head .tag:first-of-type { margin-inline-start: auto; }
+
+.chain-logo { height: 28px; width: auto; max-width: 96px; object-fit: contain; vertical-align: middle; margin-inline-end: 8px; flex: none; }
 
 .chain-name { margin: 0; font-size: 16px; font-weight: 700; }
 
