@@ -15,3 +15,13 @@ export async function fetchPrices(barcodes, chainIds) {
   if (!res.ok) throw new Error(`Supabase ${res.status}`);
   return res.json();
 }
+
+// הסל האוטומטי: נבנה ב-Supabase מחדש אחרי כל עדכון מחירים. מחזיר רשימת ברקודים לפי הסדר
+export async function fetchAutoBasket() {
+  const params = new URLSearchParams({ select: "barcode,position", order: "position.asc" });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/auto_basket?${params}`, {
+    headers: { apikey: SUPABASE_PUBLISHABLE_KEY },
+  });
+  if (!res.ok) throw new Error(`Supabase ${res.status}`);
+  return (await res.json()).map((r) => r.barcode);
+}

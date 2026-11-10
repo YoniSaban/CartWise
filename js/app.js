@@ -1,6 +1,6 @@
 // מעבר בין מסכים: "בניית הסל", "המלצת חלופות" ו"פלט תוצאות"
 import * as basket from "./basket.js?v=12";
-import { fetchPrices } from "./prices.js?v=12";
+import { fetchAutoBasket, fetchPrices } from "./prices.js?v=13";
 import { compareBasket, formatPrice, parseChainSize, parseSizeText, unitPrice } from "./compare.js?v=12";
 import { findSubstitutes } from "./substitutes.js?v=12";
 
@@ -10,7 +10,7 @@ let products = [];
 let chains = [];
 let byBarcode = new Map();
 let activeCategory = null;
-let readyBarcodes = [];
+let autoBarcodes = [];
 
 // ההשוואה האחרונה: הסל, המחירים מ-Supabase, וההצעות לחלופות ("chain:barcode" -> הצעה)
 let lastItems = [];
@@ -536,6 +536,21 @@ async function loadJson(path) {
   return res.json();
 }
 
+async function loadAutoBasket() {
+  try {
+    const list = (await fetchAutoBasket()).filter((b) => byBarcode.has(b));
+    if (list.length) return list;
+  } catch {
+    // ממשיכים לקובץ הגיבוי
+  }
+  try {
+    const backup = await loadJson("data/auto-basket.json?v=1");
+    return (backup.barcodes ?? []).filter((b) => byBarcode.has(b));
+  } catch {
+    return [];
+  }
+}
+
 async function init() {
   try {
     [products, chains] = await Promise.all([
@@ -548,14 +563,10 @@ async function init() {
   }
 
   byBarcode = new Map(products.map((p) => [p.barcode, p]));
-  // "סל מומלץ" לא חוסם את האפליקציה: אם הקובץ לא נטען, הכפתור פשוט לא מופיע
-  try {
-    const ready = await loadJson("data/ready-basket.json?v=1");
-    readyBarcodes = (ready.barcodes ?? []).filter((b) => byBarcode.has(b));
-  } catch {
-    readyBarcodes = [];
-  }
-  $("btn-ready").hidden = readyBarcodes.length === 0;
+  // "סל אוטומטי": נבנה ב-Supabase אחרי כל עדכון מחירים. אם לא נטען, קובץ גיבוי. אם גם הוא לא, הכפתור לא מופיע
+  autoBarcodes = await loadAutoBasket();
+  $("btn-auto").textContent = `🛒 סל אוטומטי: ${countText(autoBarcodes.length)} שיש בכל הרשתות`;
+  $("btn-auto").hidden = autoBarcodes.length === 0;
   basket.load(new Set(byBarcode.keys()), new Set(products.filter((p) => p.unit === "kg").map((p) => p.barcode)));
   renderCategories();
   render();
@@ -606,14 +617,14 @@ async function init() {
     announce("הסל רוקן");
     $("search").focus();
   });
-  // מוסיף לסל את המוצרים המומלצים שעוד לא בו. מה שכבר בסל נשאר כמו שהוא
-  $("btn-ready").addEventListener("click", () => {
-    const missing = readyBarcodes.filter((b) => !basket.has(b));
+  // מוסיף לסל את מוצרי הסל האוטומטי שעוד לא בו. מה שכבר בסל נשאר כמו שהוא
+  $("btn-auto").addEventListener("click", () => {
+    const missing = autoBarcodes.filter((b) => !basket.has(b));
     missing.forEach((b) => basket.add(b));
     render();
     announce(missing.length
-      ? `נוספו ${countText(missing.length)} מהסל המומלץ. בסל ${countText(basket.items().length)}`
-      : "כל המוצרים של הסל המומלץ כבר בסל");
+      ? `נוספו ${countText(missing.length)} מהסל האוטומטי. בסל ${countText(basket.items().length)}`
+      : "כל המוצרים של הסל האוטומטי כבר בסל");
     $("basket-title").scrollIntoView({ behavior: "smooth", block: "start" });
   });
   $("btn-back").addEventListener("click", goBuild);
