@@ -59,7 +59,7 @@
 | 47 | 998000000007 | תפוחי אדמה | 998000000007.jpg | https://commons.wikimedia.org/wiki/File:Potatoes_2.jpg ; Tiia Monto, CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0) ; Wikimedia Commons |
 | 48 | 998000000008 | תפוחי עץ גרני סמית | 998000000008.jpg | https://commons.wikimedia.org/wiki/File:The_Granny_Smith.jpg ; Dmitry Makeev, CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0) ; Wikimedia Commons |
 | 49 | 7290000048185 | גבינה לבנה 5% | 7290000048185.jpg | תמונה שסיפק בעל האתר (10.11.2026) |
-| 50 | 7290000052311 | גבינת עמק 15% פרוסה | 7290000052311.jpg | https://world.openfoodfacts.org/product/7290000052311 |
+| 50 | 7290000052311 | גבינת עמק 15% פרוסה | 7290000052311.jpg | תמונה שסיפק בעל האתר (10.11.2026) |
 | 51 | 7290004131074 | חלב 3% בקרטון | 7290004131074.jpg | https://world.openfoodfacts.org/product/7290004131074 |
 | 52 | 7290116932033 | חמאה | 7290116932033.jpg | https://world.openfoodfacts.org/product/7290116932033 |
 | 53 | 7290000408316 | יוגורט ביו 3% דנונה | 7290000408316.jpg | https://world.openfoodfacts.org/product/7290000408316 |
