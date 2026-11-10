@@ -52,7 +52,7 @@
 | 40 | 7290000104676 | אפונה ירוקה מוקפאת | 7290000104676.jpg | תמונה שסיפק בעל האתר (10.11.2026) |
 | 41 | 998000000001 | בננות | 998000000001.jpg | https://commons.wikimedia.org/wiki/File:Bananas_(white_background).jpg ; Justus Blümer from Deutschland, CC BY 2.0 (https://creativecommons.org/licenses/by/2.0) ; Wikimedia Commons |
 | 42 | 998000000002 | בצל יבש | 998000000002.jpg | https://commons.wikimedia.org/wiki/File:Onion_on_White.JPG ; Colin, CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0) ; Wikimedia Commons |
-| 43 | 998000000003 | כרוב לבן | 998000000003.jpg | https://commons.wikimedia.org/wiki/File:Wei%C3%9Fkohl_Brassica_oleracea_var._capitata_2011.JPG ; 4028mdk09, CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0) ; Wikimedia Commons |
+| 43 | 998000000003 | כרוב לבן | 998000000003.jpg | תמונה שסיפק בעל האתר (10.11.2026) |
 | 44 | 998000000004 | מלפפונים | 998000000004.jpg | https://commons.wikimedia.org/wiki/File:Cucumber_from_Denmark.jpg ; WiseMan42, CC0 (http://creativecommons.org/publicdomain/zero/1.0/deed.en) ; Wikimedia Commons |
 | 45 | 998000000005 | עגבניות | 998000000005.jpg | https://commons.wikimedia.org/wiki/File:Tomato_je.jpg ; Softeis, CC BY-SA 3.0 (http://creativecommons.org/licenses/by-sa/3.0/) ; Wikimedia Commons |
 | 46 | 998000000006 | פלפל אדום | 998000000006.jpg | https://commons.wikimedia.org/wiki/File:Red_bell_pepper.jpg ; AntanO, CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0) ; Wikimedia Commons |
