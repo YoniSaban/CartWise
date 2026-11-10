@@ -547,8 +547,23 @@ async function init() {
   $("subs").addEventListener("click", handleDecision);
   $("btn-to-results").addEventListener("click", () => showResults());
   $("btn-subs-back").addEventListener("click", goBuild);
+  // אישור בתוך הדף (לחיצה שנייה), כי confirm() חסום בחלק מהדפדפנים המובנים באפליקציות
+  let clearTimer = null;
+  const resetClear = () => {
+    clearTimeout(clearTimer);
+    clearTimer = null;
+    $("btn-clear").textContent = "נקה סל";
+    $("btn-clear").classList.remove("confirming");
+  };
   $("btn-clear").addEventListener("click", () => {
-    if (!confirm("לנקות את כל הסל?")) return;
+    if (!clearTimer) {
+      $("btn-clear").textContent = "בטוח? לחץ שוב";
+      $("btn-clear").classList.add("confirming");
+      announce("לחץ שוב על הכפתור כדי לנקות את הסל");
+      clearTimer = setTimeout(resetClear, 4000);
+      return;
+    }
+    resetClear();
     basket.clear();
     render();
     announce("הסל רוקן");

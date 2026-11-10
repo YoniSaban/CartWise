@@ -320,6 +320,8 @@ button:disabled { cursor: default; }
   border-radius: var(--radius);
 }
 
+.btn-clear.confirming { color: var(--white); background: var(--error); }
+
 .btn-clear:disabled { color: var(--field-border); background: var(--white); border-color: var(--border); }
 
 /* פלט תוצאות: כרטיס לכל רשת */
