@@ -10,6 +10,7 @@ let products = [];
 let chains = [];
 let byBarcode = new Map();
 let activeCategory = null;
+let readyBarcodes = [];
 
 // ההשוואה האחרונה: הסל, המחירים מ-Supabase, וההצעות לחלופות ("chain:barcode" -> הצעה)
 let lastItems = [];
@@ -547,6 +548,14 @@ async function init() {
   }
 
   byBarcode = new Map(products.map((p) => [p.barcode, p]));
+  // "סל מומלץ" לא חוסם את האפליקציה: אם הקובץ לא נטען, הכפתור פשוט לא מופיע
+  try {
+    const ready = await loadJson("data/ready-basket.json?v=1");
+    readyBarcodes = (ready.barcodes ?? []).filter((b) => byBarcode.has(b));
+  } catch {
+    readyBarcodes = [];
+  }
+  $("btn-ready").hidden = readyBarcodes.length === 0;
   basket.load(new Set(byBarcode.keys()), new Set(products.filter((p) => p.unit === "kg").map((p) => p.barcode)));
   renderCategories();
   render();
@@ -596,6 +605,16 @@ async function init() {
     render();
     announce("הסל רוקן");
     $("search").focus();
+  });
+  // מוסיף לסל את המוצרים המומלצים שעוד לא בו. מה שכבר בסל נשאר כמו שהוא
+  $("btn-ready").addEventListener("click", () => {
+    const missing = readyBarcodes.filter((b) => !basket.has(b));
+    missing.forEach((b) => basket.add(b));
+    render();
+    announce(missing.length
+      ? `נוספו ${countText(missing.length)} מהסל המומלץ. בסל ${countText(basket.items().length)}`
+      : "כל המוצרים של הסל המומלץ כבר בסל");
+    $("basket-title").scrollIntoView({ behavior: "smooth", block: "start" });
   });
   $("btn-back").addEventListener("click", goBuild);
   history.replaceState({ screen: "screen-build", depth: 0 }, "");
