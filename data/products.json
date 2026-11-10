@@ -96,7 +96,7 @@
       "1.5"
     ],
     "manufacturer": "החברה המרכזית",
-    "image": "assets/products/7290110115296.svg"
+    "image": "assets/products/7290110115296.jpg"
   },
   {
     "barcode": "7290003643387",
@@ -300,7 +300,7 @@
       "ג'ל"
     ],
     "manufacturer": "P&G",
-    "image": "assets/products/7702018980819.svg"
+    "image": "assets/products/7702018980819.jpg"
   },
   {
     "barcode": "8717163655825",
@@ -313,7 +313,7 @@
       "ספריי"
     ],
     "manufacturer": "יוניליוור",
-    "image": "assets/products/8717163655825.svg"
+    "image": "assets/products/8717163655825.jpg"
   },
   {
     "barcode": "8717163647226",
@@ -326,7 +326,7 @@
       "ספריי"
     ],
     "manufacturer": "יוניליוור",
-    "image": "assets/products/8717163647226.svg"
+    "image": "assets/products/8717163647226.jpg"
   },
   {
     "barcode": "7290000197456",
@@ -373,7 +373,7 @@
       "שיניים"
     ],
     "manufacturer": "קולגייט",
-    "image": "assets/products/8718951626195.svg"
+    "image": "assets/products/8718951626195.jpg"
   },
   {
     "barcode": "4084500853553",
@@ -386,7 +386,7 @@
       "נוזל"
     ],
     "manufacturer": "P&G",
-    "image": "assets/products/4084500853553.svg"
+    "image": "assets/products/4084500853553.jpg"
   },
   {
     "barcode": "7290013269621",
@@ -412,7 +412,7 @@
       "סבון"
     ],
     "manufacturer": "קולגייט-פלמוליב",
-    "image": "assets/products/8714789733289.svg"
+    "image": "assets/products/8714789733289.jpg"
   },
   {
     "barcode": "7290112492449",
@@ -447,7 +447,7 @@
       "טואלט"
     ],
     "manufacturer": "לילי",
-    "image": "assets/products/7290000190853.svg"
+    "image": "assets/products/7290000190853.jpg"
   },
   {
     "barcode": "7290017872971",
@@ -471,7 +471,7 @@
       "גזר"
     ],
     "manufacturer": "סנפרוסט",
-    "image": "assets/products/7290000104706.svg"
+    "image": "assets/products/7290000104706.jpg"
   },
   {
     "barcode": "7290000104676",
@@ -503,7 +503,7 @@
       "ampm": "7290000041148",
       "carrefour": "1556"
     },
-    "image": "assets/products/998000000001.svg"
+    "image": "assets/products/998000000001.jpg"
   },
   {
     "barcode": "998000000002",
@@ -522,7 +522,7 @@
       "ampm": "7290000043166",
       "carrefour": "1519"
     },
-    "image": "assets/products/998000000002.svg"
+    "image": "assets/products/998000000002.jpg"
   },
   {
     "barcode": "998000000003",
@@ -541,7 +541,7 @@
       "ampm": "40417",
       "carrefour": "1505"
     },
-    "image": "assets/products/998000000003.svg"
+    "image": "assets/products/998000000003.jpg"
   },
   {
     "barcode": "998000000004",
@@ -560,7 +560,7 @@
       "ampm": "40363",
       "carrefour": "1502"
     },
-    "image": "assets/products/998000000004.svg"
+    "image": "assets/products/998000000004.jpg"
   },
   {
     "barcode": "998000000005",
@@ -581,7 +581,7 @@
       "ampm": "40349",
       "carrefour": "1501"
     },
-    "image": "assets/products/998000000005.svg"
+    "image": "assets/products/998000000005.jpg"
   },
   {
     "barcode": "998000000006",
@@ -600,7 +600,7 @@
       "ampm": "7290000040707",
       "carrefour": "1516"
     },
-    "image": "assets/products/998000000006.svg"
+    "image": "assets/products/998000000006.jpg"
   },
   {
     "barcode": "998000000007",
@@ -621,7 +621,7 @@
       "ampm": "7290000040905",
       "carrefour": "1494"
     },
-    "image": "assets/products/998000000007.svg"
+    "image": "assets/products/998000000007.jpg"
   },
   {
     "barcode": "998000000008",
@@ -641,7 +641,7 @@
       "ampm": "7290000041230",
       "carrefour": "1564"
     },
-    "image": "assets/products/998000000008.svg"
+    "image": "assets/products/998000000008.jpg"
   },
   {
     "barcode": "7290000048185",
@@ -653,7 +653,7 @@
       "לבנה"
     ],
     "manufacturer": "תנובה",
-    "image": "assets/products/7290000048185.svg"
+    "image": "assets/products/7290000048185.jpg"
   },
   {
     "barcode": "7290000052311",
@@ -689,7 +689,7 @@
       "חמאה"
     ],
     "manufacturer": "תנובה",
-    "image": "assets/products/7290116932033.svg"
+    "image": "assets/products/7290116932033.jpg"
   },
   {
     "barcode": "7290000408316",
@@ -712,7 +712,7 @@
       "שוקולד"
     ],
     "manufacturer": "שטראוס",
-    "image": "assets/products/7290115678376.svg"
+    "image": "assets/products/7290115678376.jpg"
   },
   {
     "barcode": "7290004127329",
@@ -748,7 +748,7 @@
       "ביצה"
     ],
     "manufacturer": "מ. לסר",
-    "image": "assets/products/7290001201619.svg"
+    "image": "assets/products/7290001201619.jpg"
   },
   {
     "barcode": "7290005287251",
@@ -771,7 +771,7 @@
       "נקניק"
     ],
     "manufacturer": "טירת צבי",
-    "image": "assets/products/7290002371533.svg"
+    "image": "assets/products/7290002371533.jpg"
   },
   {
     "barcode": "998000000009",
@@ -791,7 +791,7 @@
       "rami_levi": "7290003187843",
       "carrefour": "7290000009350"
     },
-    "image": "assets/products/998000000009.svg"
+    "image": "assets/products/998000000009.jpg"
   },
   {
     "barcode": "998000000010",
@@ -810,7 +810,7 @@
       "wolt": "7290002042907",
       "carrefour": "7290000618083"
     },
-    "image": "assets/products/998000000010.svg"
+    "image": "assets/products/998000000010.jpg"
   },
   {
     "barcode": "998000000011",
@@ -828,7 +828,7 @@
       "wolt": "7290004485207",
       "carrefour": "3502"
     },
-    "image": "assets/products/998000000011.svg"
+    "image": "assets/products/998000000011.jpg"
   },
   {
     "barcode": "998000000012",
@@ -846,7 +846,7 @@
       "wolt": "7290004485191",
       "carrefour": "3500"
     },
-    "image": "assets/products/998000000012.svg"
+    "image": "assets/products/998000000012.jpg"
   },
   {
     "barcode": "7290018500361",
@@ -871,7 +871,7 @@
       "מלאה"
     ],
     "manufacturer": "אנגל",
-    "image": "assets/products/7290016967074.svg"
+    "image": "assets/products/7290016967074.jpg"
   },
   {
     "barcode": "7290020216311",
@@ -883,7 +883,7 @@
       "פיתה"
     ],
     "manufacturer": "אנגל",
-    "image": "assets/products/7290020216311.svg"
+    "image": "assets/products/7290020216311.jpg"
   },
   {
     "barcode": "7290002065555",
