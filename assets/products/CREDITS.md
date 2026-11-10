@@ -68,7 +68,7 @@
 | 56 | 7290000043814 | שמנת להקצפה 38% | 7290000043814.jpg | תמונה שסיפק בעל האתר (10.11.2026) |
 | 57 | 7290001201619 | ביצים ארוזות M | 7290001201619.jpg | https://commons.wikimedia.org/wiki/File:6-Pack-Chicken-Eggs.jpg ; Evan-Amos, Public domain ; Wikimedia Commons |
 | 58 | 7290005287251 | טונה סטארקיסט במים | 7290005287251.jpg | תמונה שסיפק בעל האתר (10.11.2026) |
-| 59 | 7290002371533 | סלסולי פסטרמה בדבש | 7290002371533.jpg | https://world.openfoodfacts.org/product/7290002371533 |
+| 59 | 7290002371533 | סלסולי פסטרמה בדבש | 7290002371533.jpg | תמונה שסיפק בעל האתר (10.11.2026) |
 | 60 | 998000000009 | בשר בקר טחון | 998000000009.jpg | https://commons.wikimedia.org/wiki/File:Hakket-oksekoed.jpg ; Gajda-13 at Danish Wikipedia, CC BY-SA 3.0 (http://creativecommons.org/licenses/by-sa/3.0/) ; Wikimedia Commons |
 | 61 | 998000000010 | פילה אמנון | 998000000010.jpg | https://commons.wikimedia.org/wiki/File:Oreochromis_niloticus_(RFEIMG-0352).jpg ; The U.S. Food and Drug Administration, Public domain ; Wikimedia Commons |
 | 62 | 998000000011 | חזה עוף | 998000000011.jpg | https://commons.wikimedia.org/wiki/File:Raw_chicken_slices.jpg ; kakyusei, CC0 (http://creativecommons.org/publicdomain/zero/1.0/deed.en) ; Wikimedia Commons |
