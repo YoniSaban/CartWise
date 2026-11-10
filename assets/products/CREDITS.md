@@ -49,7 +49,7 @@
 | 37 | 7290000190853 | נייר טואלט לילי פיור | 7290000190853.jpg | https://world.openfoodfacts.org/product/7290000187938 ; תורמי Open Food Facts, CC BY-SA 3.0 ; תמונה של מוצר קרוב מאותו מותג (ברקוד 7290000187938) |
 | 38 | 7290017872971 | סכיני גילוח אדג׳ | 7290017872971.jpg | תמונה שסיפק בעל האתר (10.11.2026) |
 | 39 | 7290000104706 | גזר גמדי מוקפא | 7290000104706.jpg | https://commons.wikimedia.org/wiki/File:Carrots_(baby)_-_Arlington,_MA.jpg ; Daderot, CC0 (http://creativecommons.org/publicdomain/zero/1.0/deed.en) ; Wikimedia Commons |
-| 40 | 7290000104676 | אפונה ירוקה מוקפאת | 7290000104676.jpg | https://world.openfoodfacts.org/product/7290000104676 |
+| 40 | 7290000104676 | אפונה ירוקה מוקפאת | 7290000104676.jpg | תמונה שסיפק בעל האתר (10.11.2026) |
 | 41 | 998000000001 | בננות | 998000000001.jpg | https://commons.wikimedia.org/wiki/File:Bananas_(white_background).jpg ; Justus Blümer from Deutschland, CC BY 2.0 (https://creativecommons.org/licenses/by/2.0) ; Wikimedia Commons |
 | 42 | 998000000002 | בצל יבש | 998000000002.jpg | https://commons.wikimedia.org/wiki/File:Onion_on_White.JPG ; Colin, CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0) ; Wikimedia Commons |
 | 43 | 998000000003 | כרוב לבן | 998000000003.jpg | https://commons.wikimedia.org/wiki/File:Wei%C3%9Fkohl_Brassica_oleracea_var._capitata_2011.JPG ; 4028mdk09, CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0) ; Wikimedia Commons |
