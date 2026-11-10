@@ -1,12 +1,14 @@
 // מעבר בין מסכים: "בניית הסל", "המלצת חלופות" ו"פלט תוצאות"
 import * as basket from "./basket.js?v=12";
 import { fetchAutoBasket, fetchPrices } from "./prices.js?v=13";
-import { compareBasket, formatPrice, parseChainSize, parseSizeText, unitPrice } from "./compare.js?v=12";
+import { compareBasket, formatPrice, parseChainSize, parseSizeText, unitPrice } from "./compare.js?v=13";
 import { findSubstitutes } from "./substitutes.js?v=12";
 
 const $ = (id) => document.getElementById(id);
 
 let products = [];
+// כל הסניפים מ-chains.json, והסניפים של העיר שנבחרה. ההשוואה רק מול הסניפים של העיר
+let allChains = [];
 let chains = [];
 let byBarcode = new Map();
 let activeCategory = null;
@@ -551,11 +553,39 @@ async function loadAutoBasket() {
   }
 }
 
+// העיר נשמרת בדפדפן. אם אין שמירה, או שהעיר כבר לא קיימת: העיר הראשונה ב-chains.json
+const CITY_KEY = "cartwise-city";
+function setupCity() {
+  const cities = [...new Set(allChains.map((c) => c.city))];
+  let saved = null;
+  try {
+    saved = localStorage.getItem(CITY_KEY);
+  } catch {
+    // localStorage לא זמין: העיר לא נשמרת
+  }
+  const select = $("city");
+  select.replaceChildren(...cities.map((city) => el("option", { value: city }, city)));
+  select.value = cities.includes(saved) ? saved : cities[0];
+  const apply = () => {
+    chains = allChains.filter((c) => c.city === select.value);
+  };
+  apply();
+  select.addEventListener("change", () => {
+    apply();
+    try {
+      localStorage.setItem(CITY_KEY, select.value);
+    } catch {
+      // לא נשמר, אבל הבחירה עובדת עד רענון הדף
+    }
+    announce(`העיר: ${select.value}. ההשוואה תהיה מול ${chains.length} סניפים`);
+  });
+}
+
 async function init() {
   try {
-    [products, chains] = await Promise.all([
-      loadJson("data/products.json?v=59"),
-      loadJson("data/chains.json?v=13"),
+    [products, allChains] = await Promise.all([
+      loadJson("data/products.json?v=60"),
+      loadJson("data/chains.json?v=15"),
     ]);
   } catch {
     $("products-status").textContent = "לא הצלחנו לטעון את רשימת המוצרים. נסו לרענן את הדף.";
@@ -563,6 +593,7 @@ async function init() {
   }
 
   byBarcode = new Map(products.map((p) => [p.barcode, p]));
+  setupCity();
   // "סל אוטומטי": נבנה ב-Supabase אחרי כל עדכון מחירים. אם לא נטען, קובץ גיבוי. אם גם הוא לא, הכפתור לא מופיע
   autoBarcodes = await loadAutoBasket();
   $("btn-auto").textContent = `🛒 סל אוטומטי: ${countText(autoBarcodes.length)} שיש בכל הרשתות`;

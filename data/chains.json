@@ -52,5 +52,34 @@
     "city": "תל אביב",
     "chain_code": "7290055700007",
     "logo": "assets/chains/carrefour.png"
+  },
+  {
+    "chain_id": "shufersal_herzliya",
+    "name": "שופרסל",
+    "store_id": "374",
+    "store_name": "שלי הבנים 46",
+    "city": "הרצליה",
+    "chain_code": "7290027600007",
+    "codes_from": "shufersal",
+    "logo": "assets/chains/shufersal.png"
+  },
+  {
+    "chain_id": "tiv_taam_herzliya",
+    "name": "טיב טעם",
+    "store_id": "052",
+    "store_name": "בן גוריון 56 פינת בר כוכבא",
+    "city": "הרצליה",
+    "chain_code": "7290873255550",
+    "codes_from": "tiv_taam",
+    "logo": "assets/chains/tiv_taam.png"
+  },
+  {
+    "chain_id": "stop_market",
+    "name": "סטופ מרקט",
+    "store_id": "002",
+    "store_name": "קניון ארנה",
+    "city": "הרצליה",
+    "chain_code": "7290639000004",
+    "logo": "assets/chains/stop_market.png"
   }
 ]

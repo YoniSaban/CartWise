@@ -1,9 +1,10 @@
 // החישוב והכלל של סל חלקי: מחיר כפול כמות, סכום לכל רשת, והרשת הזולה ביותר.
 // מוצר במשקל (unit: "kg"): מחיר לק"ג (price_per_kg) כפול הכמות בק"ג.
 
-// הקוד של המוצר ברשת: בדרך כלל הברקוד, אלא אם הרשת משתמשת בקוד אחר (chain_codes)
-function codeIn(chainId, product) {
-  return product.chain_codes?.[chainId] ?? product.barcode;
+// הקוד של המוצר ברשת: בדרך כלל הברקוד, אלא אם הרשת משתמשת בקוד אחר (chain_codes).
+// סניף נוסף של אותה רשת (codes_from) משתמש בקודים של הסניף הראשון שלה
+function codeIn(chain, product) {
+  return product.chain_codes?.[chain.codes_from ?? chain.chain_id] ?? product.barcode;
 }
 
 // החישוב באגורות שלמות, כדי שלא יהיו שגיאות עיגול
@@ -25,7 +26,7 @@ export function compareBasket(items, products, chains, rows, approved = new Map(
   const rowOf = new Map(rows.map((r) => [`${r.chain_id}:${r.item_code}`, r]));
   const price = (chain, barcode) => {
     const product = products.get(barcode);
-    const row = rowOf.get(`${chain.chain_id}:${codeIn(chain.chain_id, product)}`);
+    const row = rowOf.get(`${chain.chain_id}:${codeIn(chain, product)}`);
     return product.unit === "kg" ? row?.price_per_kg : row?.price;
   };
 

@@ -811,7 +811,7 @@
         750
       ],
       "parameters": {
-        "jsCode": "// מחוץ ל-09:00 עד 18:00 שעון ישראל לא עושים כלום. אחרת, פריט לכל רשת\nconst hour = Number(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem', hour: '2-digit', hour12: false }));\nif (hour < 9 || hour >= 18) return [];\n// n8n עלה סמוך לשעה עגולה: הבדיקה של השעה העגולה תעשה את העדכון, כדי שלא ירוצו שני עדכונים באותו יום\nconst minute = new Date().getMinutes();\nif ($('n8n עלה').isExecuted && (minute >= 57 || minute <= 2)) return [];\nreturn ['shufersal', 'wolt', 'tiv_taam', 'rami_levi', 'ampm', 'carrefour'].map((chain) => ({ json: { chain } }));"
+        "jsCode": "// מחוץ ל-09:00 עד 18:00 שעון ישראל לא עושים כלום. אחרת, פריט לכל סניף\nconst hour = Number(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem', hour: '2-digit', hour12: false }));\nif (hour < 9 || hour >= 18) return [];\n// n8n עלה סמוך לשעה עגולה: הבדיקה של השעה העגולה תעשה את העדכון, כדי שלא ירוצו שני עדכונים באותו יום\nconst minute = new Date().getMinutes();\nif ($('n8n עלה').isExecuted && (minute >= 57 || minute <= 2)) return [];\nreturn ['shufersal', 'wolt', 'tiv_taam', 'rami_levi', 'ampm', 'carrefour', 'shufersal_herzliya', 'tiv_taam_herzliya', 'stop_market'].map((chain) => ({ json: { chain } }));"
       },
       "id": "n102"
     },
@@ -865,8 +865,8 @@
       ],
       "parameters": {
         "mode": "expression",
-        "numberOutputs": 6,
-        "output": "={{ ['shufersal', 'wolt', 'tiv_taam', 'rami_levi', 'ampm', 'carrefour'].indexOf($json.chain) }}"
+        "numberOutputs": 9,
+        "output": "={{ ['shufersal', 'wolt', 'tiv_taam', 'rami_levi', 'ampm', 'carrefour', 'shufersal_herzliya', 'tiv_taam_herzliya', 'stop_market'].indexOf($json.chain) }}"
       },
       "id": "n105"
     },
@@ -1865,6 +1865,959 @@
       "parameters": {
         "jsCode": "// הענף נכשל: לא נכתב כלום, והמחירים הקודמים נשארים. ההודעה נשמרת ביומן ההרצות\nreturn [{ json: { chain: 'carrefour', failed_at: new Date().toISOString(), error: $input.first().json.error || $input.first().json } }];"
       }
+    },
+    {
+      "id": "d4961c09-cad1-403d-8600-da8326bc2118",
+      "name": "שופרסל הרצליה: רשימת קבצים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        2380
+      ],
+      "parameters": {
+        "url": "https://prices.shufersal.co.il/FileObject/UpdateCategory?catID=2&storeId=374",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "8241e06c-13c7-4055-813e-6cdd11b79020",
+      "name": "שופרסל הרצליה: הקובץ העדכני",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        2380
+      ],
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data;\nconst m = html.match(/https:\\/\\/pricesprodpublic[^\"]*PriceFull7290027600007-001-374-[^\"]*/);\nif (!m) throw new Error('לא נמצא קובץ PriceFull לסניף 374 של שופרסל (הרצליה)');\nreturn [{ json: { url: m[0].replace(/&amp;/g, '&') } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "16a54f35-06fc-45c4-a0e9-c08bb7d318e9",
+      "name": "שופרסל הרצליה: הורדה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        2380
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "edf9fe39-6750-45d2-965d-33d7c7c13c4c",
+      "name": "שופרסל הרצליה: שם קובץ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        2380
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nitem.binary.data.fileName = 'pricefull.xml.gz';\nitem.binary.data.fileExtension = 'gz';\nitem.binary.data.mimeType = 'application/gzip';\nreturn [item];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "fe3e7b0e-4d87-49c6-8563-c0dcc482a32b",
+      "name": "שופרסל הרצליה: פריסת gz",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        2200,
+        2380
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "5bea2cdd-de59-407a-8c4c-944b406deb0a",
+      "name": "שופרסל הרצליה: קריאת XML",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        2420,
+        2380
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_0",
+        "destinationKey": "data",
+        "options": {}
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "b7d92b8d-4f4e-43d3-9244-39a218ca576b",
+      "name": "שופרסל הרצליה: מיפוי וסינון",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        2380
+      ],
+      "parameters": {
+        "jsCode": "// קורא את קובץ ה-PriceFull, מסנן מוצרים במשקל, ומחלק למנות של 1,000\n// חוץ מהמוצרים במשקל שבסל (WEIGHTED): הם נשמרים, עם מחיר לק\"ג ב-price_per_kg\nconst WEIGHTED = new Set([\n  '7290000964775', // בננות\n  '7290000000480', // בצל יבש\n  '7290000000138', // כרוב לבן\n  '7290000000046', // מלפפונים\n  '7290000000022', // עגבניות\n  '7290000000091', // פלפל אדום\n  '7290000000596', // תפוחי אדמה\n  '7290009137507', // תפוחי עץ גרני סמית\n  '7290000933740', // בשר בקר טחון\n  '7290009011043', // פילה אמנון\n  '7290000616827', // חזה עוף\n  '7290001303436', // עוף שלם טרי\n]);\nconst xml = $input.first().json.data;\nconst loadedAt = new Date().toISOString();\nconst seen = new Set();\nconst rows = [];\nconst re = /<Item>([\\s\\S]*?)<\\/Item>/g;\nlet m;\nwhile ((m = re.exec(xml))) {\n  const s = m[1];\n  const g = (t) => {\n    const r = s.match(new RegExp('<' + t + '>([\\\\s\\\\S]*?)</' + t + '>', 'i'));\n    return r ? r[1].trim() : '';\n  };\n  const code = g('ItemCode');\n  const price = parseFloat(g('ItemPrice'));\n  const weighted = (g('bIsWeighted') || g('blsWeighted')) === '1';\n  const kg = WEIGHTED.has(code);\n  if (!code || (weighted && !kg) || !(price > 0) || seen.has(code)) continue;\n  // מוצר במשקל: המחיר בקובץ הוא לק\"ג. אריזה במשקל משוער (וולט): המחיר חלקי משקל האריזה\n  let perKg = null;\n  if (kg) {\n    const q = parseFloat(g('Quantity'));\n    const unitQty = g('UnitQty');\n    const kgInPack = /קילו|ק\"ג/.test(unitQty) ? q : /גרם/.test(unitQty) ? q / 1000 : null;\n    perKg = weighted ? price : kgInPack > 0 ? Math.round((price / kgInPack) * 100) / 100 : null;\n  }\n  seen.add(code);\n  const updated = g('PriceUpdateTime').replace(' ', 'T');\n  rows.push({\n    chain_id: 'shufersal_herzliya',\n    item_code: code,\n    item_name: g('ItemName').replace(/\\s+/g, ' '),\n    manufacturer: g('ManufactureName') || null,\n    quantity: parseFloat(g('Quantity')) || null,\n    unit: g('UnitOfMeasure') || g('UnitQty') || null,\n    price,\n    price_per_kg: perKg,\n    price_updated_at: updated || null,\n    loaded_at: loadedAt,\n  });\n}\nif (rows.length < 1000) throw new Error('נמצאו רק ' + rows.length + ' מוצרים בקובץ. לא כותבים כלום.');\n// קוד של מוצר במשקל שלא נמצא בקובץ: המוצר יופיע כחסר ברשת. הרשימה נשמרת ביומן ההרצה\nconst missingWeighted = [...WEIGHTED].filter((c) => !seen.has(c));\nif (missingWeighted.length) console.log('שופרסל הרצליה: מוצרים במשקל שלא נמצאו:', missingWeighted.join(', '));\nconst batches = [];\nfor (let i = 0; i < rows.length; i += 1000) batches.push({ json: { rows: rows.slice(i, i + 1000) } });\nif (batches.length) batches[0].json.missing_weighted = missingWeighted;\nreturn batches;"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "cd2215d6-40e4-42ed-bfb7-d198e3e5d350",
+      "name": "שופרסל הרצליה: upsert ל-Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2860,
+        2380
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/chain_items?on_conflict=chain_id,item_code",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json.rows) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 200
+            }
+          }
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "name": "שופרסל הרצליה: נכשל",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        2560
+      ],
+      "parameters": {
+        "jsCode": "// הענף נכשל: לא נכתב כלום, והמחירים הקודמים נשארים. ההודעה נשמרת ביומן ההרצות\nreturn [{ json: { chain: 'shufersal_herzliya', failed_at: new Date().toISOString(), error: $input.first().json.error || $input.first().json } }];"
+      },
+      "id": "b2da18a8-14ce-4e63-af53-69049415ab03"
+    },
+    {
+      "id": "a3e22bdf-612c-470c-8af4-421d46a98ebb",
+      "name": "טיב טעם הרצליה: דף כניסה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        2860
+      ],
+      "parameters": {
+        "url": "https://url.publishedprices.co.il/login",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "c5950e0a-e4fe-4f57-afc6-d6f77806a6f3",
+      "name": "טיב טעם הרצליה: אסימון כניסה",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        2860
+      ],
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst token = ((r.data || r.body || \"\").match(/name=\"csrftoken\" content=\"([^\"]+)\"/) || [])[1];\nconst sc = [].concat(r.headers['set-cookie'] || []);\nconst cookie = sc.map((c) => c.split(';')[0]).join('; ');\nif (!token) throw new Error('לא נמצא csrftoken בדף הכניסה');\nreturn [{ json: { token, cookie } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "4bd04a17-a690-4e7e-bf3e-76d438a03f06",
+      "name": "טיב טעם הרצליה: כניסה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        2860
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://url.publishedprices.co.il/login/user",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "r",
+              "value": ""
+            },
+            {
+              "name": "csrftoken",
+              "value": "={{ $json.token }}"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpCustomAuth": {
+          "id": "TwjSpqR4jVzlqTEz",
+          "name": "Custom Auth account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "0c048b26-5cbb-4d47-a61e-8af98d58d275",
+      "name": "טיב טעם הרצליה: עוגיית חיבור",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        2860
+      ],
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst prev = $('טיב טעם הרצליה: אסימון כניסה').first().json.cookie;\nconst sc = [].concat(r.headers['set-cookie'] || []).map((c) => c.split(';')[0]);\nconst jar = {};\nfor (const c of prev.split('; ').concat(sc)) { const [k, ...v] = c.split('='); if (k) jar[k] = v.join('='); }\nconst location = r.headers.location || '';\nif (location.includes('login')) throw new Error('הכניסה ל-Cerberus נכשלה. בדוק את ה-Credential של טיב טעם');\nreturn [{ json: { cookie: Object.entries(jar).map(([k, v]) => k + '=' + v).join('; ') } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "648e64a6-1127-4921-9bf6-03046b0aab45",
+      "name": "טיב טעם הרצליה: דף קבצים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        2860
+      ],
+      "parameters": {
+        "url": "https://url.publishedprices.co.il/file",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "10781b92-378a-4f8b-b466-fad0c70189b7",
+      "name": "טיב טעם הרצליה: אסימון קבצים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        2860
+      ],
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data;\nconst token = (html.match(/name=\"csrftoken\" content=\"([^\"]+)\"/) || [])[1];\nif (!token) throw new Error('לא נמצא csrftoken בדף הקבצים. כנראה שהכניסה נכשלה');\nreturn [{ json: { token, cookie: $('טיב טעם הרצליה: עוגיית חיבור').first().json.cookie } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "caa8e94c-55e7-4637-97fb-b911c54b6ad7",
+      "name": "טיב טעם הרצליה: חיפוש קבצים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        2860
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://url.publishedprices.co.il/file/json/dir",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "sSearch",
+              "value": "PriceFull7290873255550-"
+            },
+            {
+              "name": "iDisplayLength",
+              "value": "100000"
+            },
+            {
+              "name": "csrftoken",
+              "value": "={{ $json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "6b69ab3c-662c-4f69-96d5-b9e7adb13ff1",
+      "name": "טיב טעם הרצליה: הקובץ העדכני",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        2860
+      ],
+      "parameters": {
+        "jsCode": "const list = ($input.first().json.aaData || []).map((f) => f.fname).filter((n) => /^PriceFull7290873255550-\\d{3}-052-/.test(n)).sort();\nif (!list.length) throw new Error('לא נמצא קובץ מתאים ב-Cerberus');\nreturn [{ json: { url: 'https://url.publishedprices.co.il/file/d/' + list[list.length - 1], cookie: $('טיב טעם הרצליה: אסימון קבצים').first().json.cookie } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "6d8626bf-32ca-4685-830e-c583c6d8eda5",
+      "name": "טיב טעם הרצליה: הורדה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3080,
+        2860
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "48bb37de-4d17-4ac0-a151-67056c90cee3",
+      "name": "טיב טעם הרצליה: שם קובץ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3300,
+        2860
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nitem.binary.data.fileName = 'pricefull.xml.gz';\nitem.binary.data.fileExtension = 'gz';\nitem.binary.data.mimeType = 'application/gzip';\nreturn [item];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "9c1b2f04-9a31-4d5c-9557-bb1c738df02b",
+      "name": "טיב טעם הרצליה: פריסת gz",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        3520,
+        2860
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "0735b7bd-e364-40f6-aa7e-3244ffd4fc8d",
+      "name": "טיב טעם הרצליה: קריאת XML",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        3740,
+        2860
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_0",
+        "destinationKey": "data",
+        "options": {}
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "aa92a9b3-7131-446a-8f12-549943d36d09",
+      "name": "טיב טעם הרצליה: מיפוי וסינון",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3960,
+        2860
+      ],
+      "parameters": {
+        "jsCode": "// קורא את קובץ ה-PriceFull, מסנן מוצרים במשקל, ומחלק למנות של 1,000\n// חוץ מהמוצרים במשקל שבסל (WEIGHTED): הם נשמרים, עם מחיר לק\"ג ב-price_per_kg\nconst WEIGHTED = new Set([\n  '4412616', // בננות\n  '9913019', // בצל יבש\n  '4412852', // כרוב לבן\n  '4412784', // עגבניות\n  '9913002', // פלפל אדום\n  '7290018825211', // תפוחי אדמה\n  '6355300', // בשר בקר טחון\n  '8881388', // פילה אמנון\n  '7290010619054', // חזה עוף\n  '6520531', // עוף שלם טרי\n]);\nconst xml = $input.first().json.data;\nconst loadedAt = new Date().toISOString();\nconst seen = new Set();\nconst rows = [];\nconst re = /<Item>([\\s\\S]*?)<\\/Item>/g;\nlet m;\nwhile ((m = re.exec(xml))) {\n  const s = m[1];\n  const g = (t) => {\n    const r = s.match(new RegExp('<' + t + '>([\\\\s\\\\S]*?)</' + t + '>', 'i'));\n    return r ? r[1].trim() : '';\n  };\n  const code = g('ItemCode');\n  const price = parseFloat(g('ItemPrice'));\n  const weighted = (g('bIsWeighted') || g('blsWeighted')) === '1';\n  const kg = WEIGHTED.has(code);\n  if (!code || (weighted && !kg) || !(price > 0) || seen.has(code)) continue;\n  // מוצר במשקל: המחיר בקובץ הוא לק\"ג. אריזה במשקל משוער (וולט): המחיר חלקי משקל האריזה\n  let perKg = null;\n  if (kg) {\n    const q = parseFloat(g('Quantity'));\n    const unitQty = g('UnitQty');\n    const kgInPack = /קילו|ק\"ג/.test(unitQty) ? q : /גרם/.test(unitQty) ? q / 1000 : null;\n    perKg = weighted ? price : kgInPack > 0 ? Math.round((price / kgInPack) * 100) / 100 : null;\n  }\n  seen.add(code);\n  const updated = g('PriceUpdateTime').replace(' ', 'T');\n  rows.push({\n    chain_id: 'tiv_taam_herzliya',\n    item_code: code,\n    item_name: g('ItemName').replace(/\\s+/g, ' '),\n    manufacturer: g('ManufactureName') || null,\n    quantity: parseFloat(g('Quantity')) || null,\n    unit: g('UnitOfMeasure') || g('UnitQty') || null,\n    price,\n    price_per_kg: perKg,\n    price_updated_at: updated || null,\n    loaded_at: loadedAt,\n  });\n}\nif (rows.length < 1000) throw new Error('נמצאו רק ' + rows.length + ' מוצרים בקובץ. לא כותבים כלום.');\n// קוד של מוצר במשקל שלא נמצא בקובץ: המוצר יופיע כחסר ברשת. הרשימה נשמרת ביומן ההרצה\nconst missingWeighted = [...WEIGHTED].filter((c) => !seen.has(c));\nif (missingWeighted.length) console.log('טיב טעם הרצליה: מוצרים במשקל שלא נמצאו:', missingWeighted.join(', '));\nconst batches = [];\nfor (let i = 0; i < rows.length; i += 1000) batches.push({ json: { rows: rows.slice(i, i + 1000) } });\nif (batches.length) batches[0].json.missing_weighted = missingWeighted;\nreturn batches;"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "b8e626ec-8180-40a0-99de-b96f66e15ed6",
+      "name": "טיב טעם הרצליה: upsert ל-Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4180,
+        2860
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/chain_items?on_conflict=chain_id,item_code",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json.rows) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 200
+            }
+          }
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "name": "טיב טעם הרצליה: נכשל",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        3040
+      ],
+      "parameters": {
+        "jsCode": "// הענף נכשל: לא נכתב כלום, והמחירים הקודמים נשארים. ההודעה נשמרת ביומן ההרצות\nreturn [{ json: { chain: 'tiv_taam_herzliya', failed_at: new Date().toISOString(), error: $input.first().json.error || $input.first().json } }];"
+      },
+      "id": "c87e437b-6b50-4b68-a5f0-e74338f8b32b"
+    },
+    {
+      "id": "2a2e9061-6498-46f4-8cfd-5a76c0f152cb",
+      "name": "סטופ מרקט: דף כניסה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        3340
+      ],
+      "parameters": {
+        "url": "https://url.publishedprices.co.il/login",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "12ec7ee5-9c72-46c8-954c-ef64d7d2c1fb",
+      "name": "סטופ מרקט: אסימון כניסה",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        3340
+      ],
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst token = ((r.data || r.body || \"\").match(/name=\"csrftoken\" content=\"([^\"]+)\"/) || [])[1];\nconst sc = [].concat(r.headers['set-cookie'] || []);\nconst cookie = sc.map((c) => c.split(';')[0]).join('; ');\nif (!token) throw new Error('לא נמצא csrftoken בדף הכניסה');\nreturn [{ json: { token, cookie } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "85f58bef-6e7f-414d-9cb4-a2253201eca0",
+      "name": "סטופ מרקט: כניסה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        3340
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://url.publishedprices.co.il/login/user",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "r",
+              "value": ""
+            },
+            {
+              "name": "username",
+              "value": "Stop_Market"
+            },
+            {
+              "name": "password",
+              "value": ""
+            },
+            {
+              "name": "Submit",
+              "value": "Sign in"
+            },
+            {
+              "name": "csrftoken",
+              "value": "={{ $json.token }}"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "eb513629-e0ed-4238-83e5-475b3f90800a",
+      "name": "סטופ מרקט: עוגיית חיבור",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        3340
+      ],
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst prev = $('סטופ מרקט: אסימון כניסה').first().json.cookie;\nconst sc = [].concat(r.headers['set-cookie'] || []).map((c) => c.split(';')[0]);\nconst jar = {};\nfor (const c of prev.split('; ').concat(sc)) { const [k, ...v] = c.split('='); if (k) jar[k] = v.join('='); }\nconst location = r.headers.location || '';\nif (location.includes('login')) throw new Error('הכניסה ל-Cerberus נכשלה (סטופ מרקט). בדוק את שם המשתמש Stop_Market');\nreturn [{ json: { cookie: Object.entries(jar).map(([k, v]) => k + '=' + v).join('; ') } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "b690c503-8236-490f-962c-49d75bd4c5b1",
+      "name": "סטופ מרקט: דף קבצים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        3340
+      ],
+      "parameters": {
+        "url": "https://url.publishedprices.co.il/file",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "7f56b8af-a5c9-4857-a13d-1964dbf3adde",
+      "name": "סטופ מרקט: אסימון קבצים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        3340
+      ],
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data;\nconst token = (html.match(/name=\"csrftoken\" content=\"([^\"]+)\"/) || [])[1];\nif (!token) throw new Error('לא נמצא csrftoken בדף הקבצים. כנראה שהכניסה נכשלה');\nreturn [{ json: { token, cookie: $('סטופ מרקט: עוגיית חיבור').first().json.cookie } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "e489c1f1-2b64-40f1-97a1-cdbd5b679168",
+      "name": "סטופ מרקט: חיפוש קבצים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        3340
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://url.publishedprices.co.il/file/json/dir",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "sSearch",
+              "value": "PriceFull7290639000004-"
+            },
+            {
+              "name": "iDisplayLength",
+              "value": "100000"
+            },
+            {
+              "name": "csrftoken",
+              "value": "={{ $json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "53dfa6ed-82f5-44a5-a8e5-40fcdd660943",
+      "name": "סטופ מרקט: הקובץ העדכני",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        3340
+      ],
+      "parameters": {
+        "jsCode": "// שמות הקבצים ב-Cerberus לפעמים באותיות קטנות (pricefull), ולכן בלי תלות ברישיות\nconst list = ($input.first().json.aaData || []).map((f) => f.fname).filter((n) => /^pricefull7290639000004-\\d{3}-002-/i.test(n)).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));\nif (!list.length) throw new Error('לא נמצא קובץ מתאים ב-Cerberus');\nreturn [{ json: { url: 'https://url.publishedprices.co.il/file/d/' + list[list.length - 1], cookie: $('סטופ מרקט: אסימון קבצים').first().json.cookie } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "b4a0e6d7-b0d5-4042-8c5d-7c0fb83358e8",
+      "name": "סטופ מרקט: הורדה",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3080,
+        3340
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "55cb100d-4e82-40f7-9e09-2538dbcf0ea0",
+      "name": "סטופ מרקט: שם קובץ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3300,
+        3340
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nitem.binary.data.fileName = 'pricefull.xml.gz';\nitem.binary.data.fileExtension = 'gz';\nitem.binary.data.mimeType = 'application/gzip';\nreturn [item];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "db21180a-caa1-42c9-9329-db1e79d73416",
+      "name": "סטופ מרקט: פריסת gz",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        3520,
+        3340
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "2aca943f-787e-4470-9c68-769e23df10c2",
+      "name": "סטופ מרקט: קריאת XML",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        3740,
+        3340
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_0",
+        "destinationKey": "data",
+        "options": {}
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "8f3ed94a-7e0b-43cf-9ab3-d28346d78b52",
+      "name": "סטופ מרקט: מיפוי וסינון",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3960,
+        3340
+      ],
+      "parameters": {
+        "jsCode": "// קורא את קובץ ה-PriceFull, מסנן מוצרים במשקל, ומחלק למנות של 1,000\n// חוץ מהמוצרים במשקל שבסל (WEIGHTED): הם נשמרים, עם מחיר לק\"ג ב-price_per_kg\nconst WEIGHTED = new Set([\n  '540', // בננות\n  '93', // בצל יבש\n  '50', // כרוב לבן\n  '20', // מלפפונים\n  '12', // עגבניות\n  '153', // פלפל אדום\n  '290', // תפוחי אדמה\n  '691', // תפוחי עץ גרני סמית\n  '910406', // בשר בקר טחון\n  '910031', // חזה עוף\n  '910000', // עוף שלם טרי\n]);\nconst xml = $input.first().json.data;\nconst loadedAt = new Date().toISOString();\nconst seen = new Set();\nconst rows = [];\nconst re = /<Item>([\\s\\S]*?)<\\/Item>/g;\nlet m;\nwhile ((m = re.exec(xml))) {\n  const s = m[1];\n  const g = (t) => {\n    const r = s.match(new RegExp('<' + t + '>([\\\\s\\\\S]*?)</' + t + '>', 'i'));\n    return r ? r[1].trim() : '';\n  };\n  const code = g('ItemCode');\n  const price = parseFloat(g('ItemPrice'));\n  const weighted = (g('bIsWeighted') || g('blsWeighted')) === '1';\n  const kg = WEIGHTED.has(code);\n  if (!code || (weighted && !kg) || !(price > 0) || seen.has(code)) continue;\n  // מוצר במשקל: המחיר בקובץ הוא לק\"ג. אריזה במשקל משוער (וולט): המחיר חלקי משקל האריזה\n  let perKg = null;\n  if (kg) {\n    const q = parseFloat(g('Quantity'));\n    const unitQty = g('UnitQty');\n    const kgInPack = /קילו|ק\"ג/.test(unitQty) ? q : /גרם/.test(unitQty) ? q / 1000 : null;\n    perKg = weighted ? price : kgInPack > 0 ? Math.round((price / kgInPack) * 100) / 100 : null;\n  }\n  seen.add(code);\n  const updated = g('PriceUpdateTime').replace(' ', 'T');\n  rows.push({\n    chain_id: 'stop_market',\n    item_code: code,\n    item_name: g('ItemName').replace(/\\s+/g, ' '),\n    manufacturer: g('ManufactureName') || null,\n    quantity: parseFloat(g('Quantity')) || null,\n    unit: g('UnitOfMeasure') || g('UnitQty') || null,\n    price,\n    price_per_kg: perKg,\n    price_updated_at: updated || null,\n    loaded_at: loadedAt,\n  });\n}\nif (rows.length < 1000) throw new Error('נמצאו רק ' + rows.length + ' מוצרים בקובץ. לא כותבים כלום.');\n// קוד של מוצר במשקל שלא נמצא בקובץ: המוצר יופיע כחסר ברשת. הרשימה נשמרת ביומן ההרצה\nconst missingWeighted = [...WEIGHTED].filter((c) => !seen.has(c));\nif (missingWeighted.length) console.log('סטופ מרקט: מוצרים במשקל שלא נמצאו:', missingWeighted.join(', '));\nconst batches = [];\nfor (let i = 0; i < rows.length; i += 1000) batches.push({ json: { rows: rows.slice(i, i + 1000) } });\nif (batches.length) batches[0].json.missing_weighted = missingWeighted;\nreturn batches;"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "eab4c87b-bcfb-42e5-b4b5-62dd0d5cc781",
+      "name": "סטופ מרקט: upsert ל-Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4180,
+        3340
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/chain_items?on_conflict=chain_id,item_code",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json.rows) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 200
+            }
+          }
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "b8ac5639-641f-4535-9474-29ce7d4fff08",
+      "name": "סטופ מרקט: נכשל",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        3520
+      ],
+      "parameters": {
+        "jsCode": "// הענף נכשל: לא נכתב כלום, והמחירים הקודמים נשארים. ההודעה נשמרת ביומן ההרצות\nreturn [{ json: { chain: 'stop_market', failed_at: new Date().toISOString(), error: $input.first().json.error || $input.first().json } }];"
+      }
     }
   ],
   "connections": {
@@ -2561,6 +3514,27 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "שופרסל הרצליה: רשימת קבצים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: דף כניסה",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: דף כניסה",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -3188,6 +4162,636 @@
         [
           {
             "node": "קרפור: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל הרצליה: רשימת קבצים": {
+      "main": [
+        [
+          {
+            "node": "שופרסל הרצליה: הקובץ העדכני",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "שופרסל הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל הרצליה: הקובץ העדכני": {
+      "main": [
+        [
+          {
+            "node": "שופרסל הרצליה: הורדה",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "שופרסל הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל הרצליה: הורדה": {
+      "main": [
+        [
+          {
+            "node": "שופרסל הרצליה: שם קובץ",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "שופרסל הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל הרצליה: שם קובץ": {
+      "main": [
+        [
+          {
+            "node": "שופרסל הרצליה: פריסת gz",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "שופרסל הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל הרצליה: פריסת gz": {
+      "main": [
+        [
+          {
+            "node": "שופרסל הרצליה: קריאת XML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "שופרסל הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל הרצליה: קריאת XML": {
+      "main": [
+        [
+          {
+            "node": "שופרסל הרצליה: מיפוי וסינון",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "שופרסל הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל הרצליה: מיפוי וסינון": {
+      "main": [
+        [
+          {
+            "node": "שופרסל הרצליה: upsert ל-Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "שופרסל הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל הרצליה: upsert ל-Supabase": {
+      "main": [
+        [],
+        [
+          {
+            "node": "שופרסל הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: דף כניסה": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: אסימון כניסה",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: אסימון כניסה": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: כניסה",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: כניסה": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: עוגיית חיבור",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: עוגיית חיבור": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: דף קבצים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: דף קבצים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: אסימון קבצים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: אסימון קבצים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: חיפוש קבצים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: חיפוש קבצים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: הקובץ העדכני",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: הקובץ העדכני": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: הורדה",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: הורדה": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: שם קובץ",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: שם קובץ": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: פריסת gz",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: פריסת gz": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: קריאת XML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: קריאת XML": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: מיפוי וסינון",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: מיפוי וסינון": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: upsert ל-Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: upsert ל-Supabase": {
+      "main": [
+        [],
+        [
+          {
+            "node": "טיב טעם הרצליה: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: דף כניסה": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: אסימון כניסה",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: אסימון כניסה": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: כניסה",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: כניסה": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: עוגיית חיבור",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: עוגיית חיבור": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: דף קבצים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: דף קבצים": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: אסימון קבצים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: אסימון קבצים": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: חיפוש קבצים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: חיפוש קבצים": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: הקובץ העדכני",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: הקובץ העדכני": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: הורדה",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: הורדה": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: שם קובץ",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: שם קובץ": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: פריסת gz",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: פריסת gz": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: קריאת XML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: קריאת XML": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: מיפוי וסינון",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: מיפוי וסינון": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: upsert ל-Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: upsert ל-Supabase": {
+      "main": [
+        [],
+        [
+          {
+            "node": "סטופ מרקט: נכשל",
             "type": "main",
             "index": 0
           }

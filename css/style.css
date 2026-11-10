@@ -82,6 +82,23 @@ h2 { margin: 24px 0 8px; font-size: 16px; font-weight: 700; }
 
 /* חיפוש וקטגוריות: שתי שורות קבועות, בלי גלילה.
    עליונה: חיפוש, "כל הסל", "מזון יבש", "לחם". תחתונה: שאר הקטגוריות */
+/* בחירת עיר: באותה שורה של הכותרת, בצד שמאל. ההשוואה רק מול הסניפים של העיר */
+.title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.title-row h1 { margin-bottom: 0; }
+.title-row + .subtitle { margin-top: 4px; }
+.city { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.city label { font-weight: 500; }
+.city select {
+  height: 40px;
+  font: inherit;
+  color: var(--text);
+  background: var(--white);
+  border: 1.5px solid var(--field-border);
+  border-radius: var(--radius);
+  padding: 0 8px;
+}
+.city select:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
 .filters { display: grid; gap: 8px; }
 
 .toolbar { display: flex; align-items: center; gap: 8px; }

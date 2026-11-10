@@ -694,7 +694,8 @@
       "wolt": "7290101503583",
       "rami_levi": "7290000000134",
       "ampm": "7290000041148",
-      "carrefour": "1556"
+      "carrefour": "1556",
+      "stop_market": "540"
     },
     "image": "assets/products/998000000001.jpg?h=fdcf04af"
   },
@@ -713,7 +714,8 @@
       "wolt": "7290101503606",
       "rami_levi": "7290000000108",
       "ampm": "7290000043166",
-      "carrefour": "1519"
+      "carrefour": "1519",
+      "stop_market": "93"
     },
     "image": "assets/products/998000000002.jpg?h=32ac17e5"
   },
@@ -732,7 +734,8 @@
       "wolt": "8004643753523",
       "rami_levi": "7290000000109",
       "ampm": "40417",
-      "carrefour": "1505"
+      "carrefour": "1505",
+      "stop_market": "50"
     },
     "image": "assets/products/998000000003.jpg?h=593cb676"
   },
@@ -751,7 +754,8 @@
       "wolt": "7290101503644",
       "rami_levi": "7290000000101",
       "ampm": "40363",
-      "carrefour": "1502"
+      "carrefour": "1502",
+      "stop_market": "20"
     },
     "image": "assets/products/998000000004.jpg?h=6659a67a"
   },
@@ -772,7 +776,8 @@
       "wolt": "7290101503675",
       "rami_levi": "7290000000100",
       "ampm": "40349",
-      "carrefour": "1501"
+      "carrefour": "1501",
+      "stop_market": "12"
     },
     "image": "assets/products/998000000005.jpg?h=bc552e16"
   },
@@ -791,7 +796,8 @@
       "wolt": "7290101503682",
       "rami_levi": "7290000000104",
       "ampm": "7290000040707",
-      "carrefour": "1516"
+      "carrefour": "1516",
+      "stop_market": "153"
     },
     "image": "assets/products/998000000006.jpg?h=ff3084de"
   },
@@ -812,7 +818,8 @@
       "wolt": "7290018825822",
       "rami_levi": "7290000000422",
       "ampm": "7290000040905",
-      "carrefour": "1494"
+      "carrefour": "1494",
+      "stop_market": "290"
     },
     "image": "assets/products/998000000007.jpg?h=06ddbb8c"
   },
@@ -832,7 +839,8 @@
       "wolt": "7290018758267",
       "rami_levi": "7290000000116",
       "ampm": "7290000041230",
-      "carrefour": "1564"
+      "carrefour": "1564",
+      "stop_market": "691"
     },
     "image": "assets/products/998000000008.jpg?h=b83202de"
   },
@@ -1099,7 +1107,8 @@
       "tiv_taam": "6355300",
       "wolt": "7290004281991",
       "rami_levi": "7290003187843",
-      "carrefour": "7290000009350"
+      "carrefour": "7290000009350",
+      "stop_market": "910406"
     },
     "image": "assets/products/998000000009.jpg?h=8947ac31"
   },
@@ -1136,7 +1145,8 @@
       "shufersal": "7290000616827",
       "tiv_taam": "7290010619054",
       "wolt": "7290004485207",
-      "carrefour": "3502"
+      "carrefour": "3502",
+      "stop_market": "910031"
     },
     "image": "assets/products/998000000011.jpg?h=0fcf2ab2"
   },
@@ -1154,7 +1164,8 @@
       "shufersal": "7290001303436",
       "tiv_taam": "6520531",
       "wolt": "7290004485191",
-      "carrefour": "3500"
+      "carrefour": "3500",
+      "stop_market": "910000"
     },
     "image": "assets/products/998000000012.jpg?h=25fb4bc9"
   },

@@ -71,9 +71,11 @@ async function supabase(path, options = {}) {
 const key = (chainId, barcode) => `${chainId}:${barcode}`;
 const inList = (values) => `in.(${values.map((v) => `"${v}"`).join(",")})`;
 
-// הקוד של המוצר ברשת: בדרך כלל הברקוד, אלא אם הרשת משתמשת בקוד אחר
+// הקוד של המוצר ברשת: בדרך כלל הברקוד, אלא אם הרשת משתמשת בקוד אחר.
+// סניף נוסף של אותה רשת (codes_from) משתמש בקודים של הסניף הראשון שלה
+const chainById = new Map(chains.map((c) => [c.chain_id, c]));
 function codeIn(chainId, product) {
-  return product.chain_codes?.[chainId] ?? product.barcode;
+  return product.chain_codes?.[chainById.get(chainId)?.codes_from ?? chainId] ?? product.barcode;
 }
 
 // המטמון: תשובות קודמות, כל עוד החלופה עדיין קיימת ברשת
