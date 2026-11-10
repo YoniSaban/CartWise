@@ -360,6 +360,10 @@ h1:focus { outline: none; }
 
 .tag-partial { color: var(--warning); background: #FFF4E5; }
 
+/* הזול מבין הסלים החלקיים: מסגרת כתומה, פחות בולט מ"הזול ביותר" */
+.card.result.cheapest-partial { border: 2px solid var(--warning); }
+.tag-cheapest-partial { color: var(--white); background: var(--warning); }
+
 .result-missing, .result-weighted, .result-note { margin: 2px 0 0; font-size: 13px; color: var(--text-muted); }
 
 /* מוצרים שלא נמצאו באף רשת: מסגרת מקווקווה, ההתראה למשתמש */
@@ -424,6 +428,10 @@ h1:focus { outline: none; }
 .sub-state:empty { display: none; }
 
 #subs-note { margin-top: 16px; }
+
+/* "אשר הכל" / "דחה הכל" מעל הכרטיסים */
+.sub-bulk { margin: 0 0 4px; }
+.sub-bulk[hidden] { display: none; }
 
 .actions .btn-link { justify-self: center; }
 

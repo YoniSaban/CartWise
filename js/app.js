@@ -1,8 +1,8 @@
 // מעבר בין מסכים: "בניית הסל", "המלצת חלופות" ו"פלט תוצאות"
-import * as basket from "./basket.js?v=11";
-import { fetchPrices } from "./prices.js?v=11";
-import { compareBasket, formatPrice, parseChainSize, parseSizeText, unitPrice } from "./compare.js?v=11";
-import { findSubstitutes } from "./substitutes.js?v=11";
+import * as basket from "./basket.js?v=12";
+import { fetchPrices } from "./prices.js?v=12";
+import { compareBasket, formatPrice, parseChainSize, parseSizeText, unitPrice } from "./compare.js?v=12";
+import { findSubstitutes } from "./substitutes.js?v=12";
 
 const $ = (id) => document.getElementById(id);
 
@@ -264,7 +264,7 @@ function renderResults({ results, notFound }, counted) {
   const saving = complete.length > 1
     ? Math.max(...complete.map((r) => r.total)) - Math.min(...complete.map((r) => r.total)) : 0;
   for (const r of results) {
-    const li = el("li", { class: r.cheapest ? "card result cheapest" : "card result" });
+    const li = el("li", { class: r.cheapest ? "card result cheapest" : r.cheapestPartial ? "card result cheapest-partial" : "card result" });
     const head = el("div", { class: "result-head" });
     // הלוגו דקורטיבי: השם נשאר לידו. לוגו שלא נטען מוסתר
     if (r.chain.logo) {
@@ -275,6 +275,7 @@ function renderResults({ results, notFound }, counted) {
     head.append(el("h3", { class: "chain-name" }, r.chain.name));
     if (r.cheapest) head.append(el("span", { class: "tag tag-cheapest" }, "✓ הזול ביותר"));
     if (r.substituted.length) head.append(el("span", { class: "tag tag-sub" }, "⇄ חלופה"));
+    if (r.cheapestPartial) head.append(el("span", { class: "tag tag-cheapest-partial" }, "✓ הזול מבין החלקיים"));
     if (!r.complete) head.append(el("span", { class: "tag tag-partial" }, "חלקי"));
     li.append(
       head,
@@ -364,7 +365,11 @@ function showResults(nav = "push") {
   const best = results.find((r) => r.cheapest);
   const lost = !notFound.length ? ""
     : notFound.length === 1 ? ". מוצר אחד לא נמצא באף רשת" : `. ${notFound.length} מוצרים לא נמצאו באף רשת`;
-  if (best) announce(`הזול ביותר: ${best.chain.name}, ${formatPrice(best.total)}${lost}`);
+  const bestPartial = results.find((r) => r.cheapestPartial);
+  const partialText = !bestPartial ? ""
+    : `. הזול מבין החלקיים: ${bestPartial.chain.name}, ${formatPrice(bestPartial.total)}, ${statusText(bestPartial, 0).replace("חלקי, ", "")}`;
+  if (best) announce(`הזול ביותר: ${best.chain.name}, ${formatPrice(best.total)}${partialText}${lost}`);
+  else if (bestPartial) announce(`אין רשת עם סל מלא${partialText}${lost}`);
   else if (notFound.length < lastItems.length) announce(`התוצאות מוכנות. אין רשת עם סל מלא${lost}`);
   else announce("אף מוצר בסל לא נמצא ברשתות");
 }
@@ -379,6 +384,12 @@ function decisionText(value) {
 function renderSubs(pairs) {
   const list = $("subs");
   list.replaceChildren();
+  // "אשר הכל" ו"דחה הכל": רק כשיש לפחות חלופה אחת
+  const offered = pairs.filter(({ chain, barcode }) => suggestions.get(`${chain.chain_id}:${barcode}`)?.item);
+  $("subs-bulk").hidden = !offered.length;
+  const all = (v) => offered.length > 0 && offered.every(({ chain, barcode }) => basket.decision(chain.chain_id, barcode) === v);
+  $("btn-approve-all").setAttribute("aria-pressed", String(all("approved")));
+  $("btn-reject-all").setAttribute("aria-pressed", String(all("rejected")));
   for (const { chain, barcode } of pairs) {
     const s = suggestions.get(`${chain.chain_id}:${barcode}`);
     const p = byBarcode.get(barcode);
@@ -417,6 +428,20 @@ function renderSubs(pairs) {
 }
 
 let subsPairs = [];
+
+// החלטה אחת לכל החלופות שהוצעו
+function decideAll(value) {
+  let n = 0;
+  for (const { chain, barcode } of subsPairs) {
+    if (!suggestions.get(`${chain.chain_id}:${barcode}`)?.item) continue;
+    basket.decide(chain.chain_id, barcode, value);
+    n++;
+  }
+  renderSubs(subsPairs);
+  announce(value === "approved"
+    ? (n === 1 ? "החלופה אושרה" : `כל ${n} החלופות אושרו`)
+    : (n === 1 ? "החלופה נדחתה" : `כל ${n} החלופות נדחו`));
+}
 
 // גודל להצגה: { amount: 1500, base: "ml" } -> "1.5 ליטר"
 function sizeText({ amount, base }) {
@@ -484,6 +509,7 @@ async function compare() {
   // מסך הטעינה של התוצאות מוחלף במסך החלופות, כדי ש"חזרה" ממנו תגיע לבניית הסל
   showScreen("screen-subs", "replace");
   $("subs").replaceChildren();
+  $("subs-bulk").hidden = true;
   $("btn-to-results").disabled = true;
   $("subs-status").textContent = "מחפשים חלופות ברשתות...";
   $("subs-title").focus();
@@ -545,6 +571,8 @@ async function init() {
   $("basket").addEventListener("click", handleClick);
   $("btn-compare").addEventListener("click", compare);
   $("subs").addEventListener("click", handleDecision);
+  $("btn-approve-all").addEventListener("click", () => decideAll("approved"));
+  $("btn-reject-all").addEventListener("click", () => decideAll("rejected"));
   $("btn-to-results").addEventListener("click", () => showResults());
   $("btn-subs-back").addEventListener("click", goBuild);
   // אישור בתוך הדף (לחיצה שנייה), כי confirm() חסום בחלק מהדפדפנים המובנים באפליקציות

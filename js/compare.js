@@ -19,6 +19,8 @@ function toAgorot(price) {
 //   weighted: המוצרים במשקל שנכנסו לסכום, עם המחיר לק"ג ברשת.
 //   חלופה שאושרה נכנסת לסכום במחיר שלה כפול הכמות, והמוצר לא נספר כחסר (substituted).
 //   "הזול ביותר" רק בין רשתות שהסל מלא בהן. אם אין כזו, אף רשת לא מקבלת אותה.
+//   cheapestPartial: "הזול מבין החלקיים", בין הרשתות החלקיות שחסרים בהן הכי מעט מוצרים, הזולה מהן.
+//   כך רשת שחסרים בה יותר מוצרים לא "זולה" רק בגלל שחסר בה יותר. רשת שאין בה אף מוצר לא מקבלת אותה.
 export function compareBasket(items, products, chains, rows, approved = new Map()) {
   const rowOf = new Map(rows.map((r) => [`${r.chain_id}:${r.item_code}`, r]));
   const price = (chain, barcode) => {
@@ -59,7 +61,7 @@ export function compareBasket(items, products, chains, rows, approved = new Map(
         missing.push(barcode);
       }
     }
-    return { chain, total, missing, substituted, weighted, lines, complete: missing.length === 0, cheapest: false };
+    return { chain, total, missing, substituted, weighted, lines, complete: missing.length === 0, cheapest: false, cheapestPartial: false };
   });
 
   const complete = results.filter((r) => r.complete);
@@ -69,8 +71,16 @@ export function compareBasket(items, products, chains, rows, approved = new Map(
     for (const r of complete) r.cheapest = r.total === min;
   }
 
-  // רשתות עם סל מלא קודם, מהזול ליקר. אחריהן החלקיות, מהזול ליקר.
-  results.sort((a, b) => (b.complete - a.complete) || (a.total - b.total));
+  const partial = results.filter((r) => !r.complete && r.missing.length < counted.length);
+  if (partial.length) {
+    const fewest = Math.min(...partial.map((r) => r.missing.length));
+    const closest = partial.filter((r) => r.missing.length === fewest);
+    const min = Math.min(...closest.map((r) => r.total));
+    for (const r of closest) r.cheapestPartial = r.total === min;
+  }
+
+  // רשתות עם סל מלא קודם, מהזול ליקר. אחריהן החלקיות: מהמעט חסרים להרבה, ובאותו מספר מהזול ליקר.
+  results.sort((a, b) => (b.complete - a.complete) || (a.missing.length - b.missing.length) || (a.total - b.total));
   return { results, notFound };
 }
 
