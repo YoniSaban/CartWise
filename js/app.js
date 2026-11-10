@@ -512,7 +512,7 @@ async function loadJson(path) {
 async function init() {
   try {
     [products, chains] = await Promise.all([
-      loadJson("data/products.json?v=44"),
+      loadJson("data/products.json?v=45"),
       loadJson("data/chains.json?v=13"),
     ]);
   } catch {
