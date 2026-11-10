@@ -48,7 +48,7 @@
 | 36 | 7290016197839 | שקיות אשפה XL חזקות ניקול | 7290016197839.jpg | תמונה שסיפק בעל האתר (10.11.2026) |
 | 37 | 7290000190853 | נייר טואלט לילי פיור | 7290000190853.jpg | תמונה שסיפק בעל האתר (10.11.2026) |
 | 38 | 7290017872971 | סכיני גילוח אדג׳ | 7290017872971.jpg | תמונה שסיפק בעל האתר (10.11.2026) |
-| 39 | 7290000104706 | גזר גמדי מוקפא | 7290000104706.jpg | https://commons.wikimedia.org/wiki/File:Carrots_(baby)_-_Arlington,_MA.jpg ; Daderot, CC0 (http://creativecommons.org/publicdomain/zero/1.0/deed.en) ; Wikimedia Commons |
+| 39 | 7290000104706 | גזר גמדי מוקפא | 7290000104706.jpg | תמונה שסיפק בעל האתר (10.11.2026) |
 | 40 | 7290000104676 | אפונה ירוקה מוקפאת | 7290000104676.jpg | תמונה שסיפק בעל האתר (10.11.2026) |
 | 41 | 998000000001 | בננות | 998000000001.jpg | https://commons.wikimedia.org/wiki/File:Bananas_(white_background).jpg ; Justus Blümer from Deutschland, CC BY 2.0 (https://creativecommons.org/licenses/by/2.0) ; Wikimedia Commons |
 | 42 | 998000000002 | בצל יבש | 998000000002.jpg | https://commons.wikimedia.org/wiki/File:Onion_on_White.JPG ; Colin, CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0) ; Wikimedia Commons |
