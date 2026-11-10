@@ -116,8 +116,8 @@ h2 { margin: 24px 0 8px; font-size: 16px; font-weight: 700; }
 
 .categories { display: flex; gap: 8px; }
 
-/* בשורה העליונה הכפתורים ברוחב קבוע, כדי ש"לחם" יהיה אובלי כמו השאר */
-.toolbar .chip { min-width: 92px; }
+/* בשורה העליונה הכפתורים ברוחב מינימלי, כדי ש"לחם" יהיה אובלי כמו השאר */
+.toolbar .chip { min-width: 64px; }
 
 .categories-bottom { display: grid; grid-template-columns: repeat(4, 1fr); }
 

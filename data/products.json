@@ -36,32 +36,6 @@
     "image": "assets/products/7290000178707.jpg?h=16058b45"
   },
   {
-    "barcode": "7290000023809",
-    "name": "יין אדום ברקן קלאסיק קברנה",
-    "size": "750 מ\"ל",
-    "category": "מזון יבש",
-    "keywords": [
-      "יין",
-      "קברנה",
-      "אדום"
-    ],
-    "manufacturer": "ברקן",
-    "image": "assets/products/7290000023809.jpg?h=f1edd7bf"
-  },
-  {
-    "barcode": "7290110114961",
-    "name": "פריגת תפוזים",
-    "size": "1.5 ליטר",
-    "category": "מזון יבש",
-    "keywords": [
-      "פריגת",
-      "תפוזים",
-      "מיץ"
-    ],
-    "manufacturer": "פריגת",
-    "image": "assets/products/7290110114961.jpg?h=4f1cd99b"
-  },
-  {
     "barcode": "7290000523804",
     "name": "מלח עדין בצנצנת",
     "size": "1 ק\"ג",
@@ -84,19 +58,6 @@
     ],
     "manufacturer": "פררו",
     "image": "assets/products/80135876.jpg?h=72486568"
-  },
-  {
-    "barcode": "7290110115296",
-    "name": "פאנטה אורנג'",
-    "size": "1.5 ליטר",
-    "category": "מזון יבש",
-    "keywords": [
-      "פאנטה",
-      "משקה",
-      "1.5"
-    ],
-    "manufacturer": "החברה המרכזית",
-    "image": "assets/products/7290110115296.jpg?h=907dfc19"
   },
   {
     "barcode": "7290003643387",
@@ -276,6 +237,172 @@
     ],
     "manufacturer": "יד מרדכי",
     "image": "assets/products/7290010429554.jpg?h=4779059d"
+  },
+  {
+    "barcode": "7290000211985",
+    "name": "אורז עגול",
+    "size": "1 ק\"ג",
+    "category": "מזון יבש",
+    "keywords": [
+      "אורז",
+      "עגול",
+      "ריזוטו"
+    ],
+    "manufacturer": "סוגת",
+    "image": "assets/products/7290000211985.jpg?h=7e84ba77"
+  },
+  {
+    "barcode": "7290003643004",
+    "name": "אורז בסמטי קלאסי",
+    "size": "1 ק\"ג",
+    "category": "מזון יבש",
+    "keywords": [
+      "אורז",
+      "בסמטי"
+    ],
+    "manufacturer": "סוגת",
+    "image": "assets/products/7290003643004.jpg?h=7e63fbfd"
+  },
+  {
+    "barcode": "7290003643769",
+    "name": "עדשים אדומות",
+    "size": "500 גרם",
+    "category": "מזון יבש",
+    "keywords": [
+      "עדשים",
+      "קטניות"
+    ],
+    "manufacturer": "סוגת",
+    "image": "assets/products/7290003643769.jpg?h=ae70b338"
+  },
+  {
+    "barcode": "7290000060200",
+    "name": "פתיתים אפויים קוסקוס",
+    "size": "500 גרם",
+    "category": "מזון יבש",
+    "keywords": [
+      "פתיתים",
+      "פסטה"
+    ],
+    "manufacturer": "אסם",
+    "image": "assets/products/7290000060200.jpg?h=ce860b28"
+  },
+  {
+    "barcode": "7290107871990",
+    "name": "פסטה צינורות",
+    "size": "500 גרם",
+    "category": "מזון יבש",
+    "keywords": [
+      "פסטה",
+      "צינורות",
+      "פנה"
+    ],
+    "manufacturer": "אסם",
+    "image": "assets/products/7290107871990.jpg?h=1d58d918"
+  },
+  {
+    "barcode": "7290000060163",
+    "name": "אטריות דקות",
+    "size": "400 גרם",
+    "category": "מזון יבש",
+    "keywords": [
+      "אטריות",
+      "פסטה",
+      "מרק"
+    ],
+    "manufacturer": "אסם",
+    "image": "assets/products/7290000060163.jpg?h=8f18ee94"
+  },
+  {
+    "barcode": "7290000208428",
+    "name": "חומוס שלם",
+    "size": "550 גרם",
+    "category": "מזון יבש",
+    "keywords": [
+      "חומוס",
+      "גרגירים",
+      "שימורים",
+      "קטניות"
+    ],
+    "manufacturer": "יכין",
+    "image": "assets/products/7290000208428.jpg?h=e42707a9"
+  },
+  {
+    "barcode": "7290000208947",
+    "name": "עגבניות מרוסקות",
+    "size": "240 גרם",
+    "category": "מזון יבש",
+    "keywords": [
+      "עגבניות",
+      "רוטב",
+      "שימורים"
+    ],
+    "manufacturer": "יכין",
+    "image": "assets/products/7290000208947.jpg?h=73aaa158"
+  },
+  {
+    "barcode": "7290112492999",
+    "name": "מרק בטעם עוף",
+    "size": "400 גרם",
+    "category": "מזון יבש",
+    "keywords": [
+      "מרק",
+      "אבקת מרק",
+      "עוף"
+    ],
+    "manufacturer": "קנור",
+    "image": "assets/products/7290112492999.jpg?h=72e2e9a4"
+  },
+  {
+    "barcode": "7290000111186",
+    "name": "מיונז אמיתי",
+    "size": "500 גרם",
+    "category": "מזון יבש",
+    "keywords": [
+      "מיונז",
+      "רוטב"
+    ],
+    "manufacturer": "תלמה",
+    "image": "assets/products/7290000111186.jpg?h=c0c08259"
+  },
+  {
+    "barcode": "7290106577282",
+    "name": "טחינה אמיתית",
+    "size": "400 גרם",
+    "category": "מזון יבש",
+    "keywords": [
+      "טחינה",
+      "ממרח",
+      "שומשום"
+    ],
+    "manufacturer": "צבר",
+    "image": "assets/products/7290106577282.jpg?h=b402b4d0"
+  },
+  {
+    "barcode": "7290000072623",
+    "name": "קטשופ בקבוק לחיץ",
+    "size": "750 גרם",
+    "category": "מזון יבש",
+    "keywords": [
+      "קטשופ",
+      "רוטב"
+    ],
+    "manufacturer": "אסם",
+    "image": "assets/products/7290000072623.jpg?h=58a5b897"
+  },
+  {
+    "barcode": "7290006374738",
+    "name": "קונפיטורת תות",
+    "size": "340 גרם",
+    "category": "מזון יבש",
+    "keywords": [
+      "ריבה",
+      "קונפיטורה",
+      "תות",
+      "ממרח"
+    ],
+    "manufacturer": "יד מרדכי",
+    "image": "assets/products/7290006374738.jpg?h=73d3e2e4"
   },
   {
     "barcode": "7290016509786",
@@ -463,6 +590,72 @@
     "image": "assets/products/7290017872971.jpg?h=a2d6fb54"
   },
   {
+    "barcode": "7290000188355",
+    "name": "מגבות נייר",
+    "size": "6 גלילים",
+    "category": "טואלטיקה וניקיון",
+    "keywords": [
+      "מגבות",
+      "נייר",
+      "מטבח"
+    ],
+    "manufacturer": "ניקול",
+    "image": "assets/products/7290000188355.jpg?h=c145e29b"
+  },
+  {
+    "barcode": "7290000197753",
+    "name": "ניילון נצמד",
+    "size": "2*30 מטר",
+    "category": "טואלטיקה וניקיון",
+    "keywords": [
+      "ניילון",
+      "נצמד",
+      "עטיפה"
+    ],
+    "manufacturer": "ניקול",
+    "image": "assets/products/7290000197753.jpg?h=852fa92f"
+  },
+  {
+    "barcode": "7290000412481",
+    "name": "מנקה אסלות 00",
+    "size": "1 ליטר",
+    "category": "טואלטיקה וניקיון",
+    "keywords": [
+      "אסלה",
+      "ניקוי",
+      "אקונומיקה"
+    ],
+    "manufacturer": "סנו",
+    "image": "assets/products/7290000412481.jpg?h=6f97d37e"
+  },
+  {
+    "barcode": "7290005425646",
+    "name": "סנו קליר לניקוי חלונות",
+    "size": "1 ליטר",
+    "category": "טואלטיקה וניקיון",
+    "keywords": [
+      "חלונות",
+      "זכוכית",
+      "ניקוי"
+    ],
+    "manufacturer": "סנו",
+    "image": "assets/products/7290005425646.jpg?h=c684c903"
+  },
+  {
+    "barcode": "8700216744560",
+    "name": "ג'ל כביסה אריאל ניחוח הרים",
+    "size": "1.75 ליטר",
+    "category": "טואלטיקה וניקיון",
+    "keywords": [
+      "כביסה",
+      "ג'ל",
+      "אריאל",
+      "אבקה"
+    ],
+    "manufacturer": "אריאל",
+    "image": "assets/products/8700216744560.jpg?h=11a6cb8d"
+  },
+  {
     "barcode": "7290000104706",
     "name": "גזר גמדי מוקפא",
     "size": "800 גרם",
@@ -644,6 +837,48 @@
     "image": "assets/products/998000000008.jpg?h=b83202de"
   },
   {
+    "barcode": "7290000107295",
+    "name": "תפרחות ברוקולי מוקפא",
+    "size": "800 גרם",
+    "category": "ירקות ופירות",
+    "keywords": [
+      "ברוקולי",
+      "קפוא",
+      "מוקפא",
+      "ירקות"
+    ],
+    "manufacturer": "סנפרוסט",
+    "image": "assets/products/7290000107295.jpg?h=6b4088ab"
+  },
+  {
+    "barcode": "7290000104836",
+    "name": "שעועית ירוקה עדינה מוקפאת",
+    "size": "600 גרם",
+    "category": "ירקות ופירות",
+    "keywords": [
+      "שעועית",
+      "קפוא",
+      "מוקפא",
+      "ירקות"
+    ],
+    "manufacturer": "סנפרוסט",
+    "image": "assets/products/7290000104836.jpg?h=5f4f7e7a"
+  },
+  {
+    "barcode": "7290012884986",
+    "name": "צ'יפס לתנור",
+    "size": "1.5 ק\"ג",
+    "category": "ירקות ופירות",
+    "keywords": [
+      "ציפס",
+      "צ'יפס",
+      "תפוחי אדמה",
+      "קפוא"
+    ],
+    "manufacturer": "תפוגן",
+    "image": "assets/products/7290012884986.jpg?h=7c71bcba"
+  },
+  {
     "barcode": "7290000048185",
     "name": "גבינה לבנה 5%",
     "size": "250 גרם",
@@ -751,6 +986,81 @@
     "image": "assets/products/7290001201619.jpg?h=201c1f17"
   },
   {
+    "barcode": "7290004125455",
+    "name": "שמנת חמוצה 15%",
+    "size": "200 מ\"ל",
+    "category": "ביצים, חלב ומוצריו",
+    "keywords": [
+      "שמנת",
+      "חמוצה"
+    ],
+    "manufacturer": "תנובה",
+    "image": "assets/products/7290004125455.jpg?h=7c587201"
+  },
+  {
+    "barcode": "7290004137021",
+    "name": "שמנת לבישול 10%",
+    "size": "250 מ\"ל",
+    "category": "ביצים, חלב ומוצריו",
+    "keywords": [
+      "שמנת",
+      "בישול"
+    ],
+    "manufacturer": "תנובה",
+    "image": "assets/products/7290004137021.jpg?h=ced16c72"
+  },
+  {
+    "barcode": "7290000554600",
+    "name": "גבינת מוצרלה מגורדת 22%",
+    "size": "300 גרם",
+    "category": "ביצים, חלב ומוצריו",
+    "keywords": [
+      "גבינה",
+      "מוצרלה",
+      "מגורדת",
+      "פיצה"
+    ],
+    "manufacturer": "גד",
+    "image": "assets/products/7290000554600.jpg?h=c72fe7e4"
+  },
+  {
+    "barcode": "7290011499327",
+    "name": "גבינה בולגרית מעודנת 5%",
+    "size": "250 גרם",
+    "category": "ביצים, חלב ומוצריו",
+    "keywords": [
+      "גבינה",
+      "בולגרית",
+      "מלוחה"
+    ],
+    "manufacturer": "גד",
+    "image": "assets/products/7290011499327.jpg?h=818fdff5"
+  },
+  {
+    "barcode": "7290017065588",
+    "name": "יוגורט יווני 10%",
+    "size": "600 גרם",
+    "category": "ביצים, חלב ומוצריו",
+    "keywords": [
+      "יוגורט",
+      "יווני"
+    ],
+    "manufacturer": "גד",
+    "image": "assets/products/7290017065588.jpg?h=caa7c4c6"
+  },
+  {
+    "barcode": "7290116930695",
+    "name": "חלב נטול לקטוז 2%",
+    "size": "1 ליטר",
+    "category": "ביצים, חלב ומוצריו",
+    "keywords": [
+      "חלב",
+      "לקטוז"
+    ],
+    "manufacturer": "תנובה",
+    "image": "assets/products/7290116930695.jpg?h=e1afcf48"
+  },
+  {
     "barcode": "7290005287251",
     "name": "טונה סטארקיסט במים",
     "size": "4*160 גרם",
@@ -849,6 +1159,32 @@
     "image": "assets/products/998000000012.jpg?h=25fb4bc9"
   },
   {
+    "barcode": "7290015039338",
+    "name": "טונה במי מלח",
+    "size": "4*160 גרם",
+    "category": "מוצרי בשר ודגים",
+    "keywords": [
+      "טונה",
+      "דגים",
+      "שימורים"
+    ],
+    "manufacturer": "ויליפוד",
+    "image": "assets/products/7290015039338.jpg?h=0d095c0d"
+  },
+  {
+    "barcode": "7290008409551",
+    "name": "שניצל עוף אמיתי מעודן",
+    "size": "700 גרם",
+    "category": "מוצרי בשר ודגים",
+    "keywords": [
+      "שניצל",
+      "עוף",
+      "קפוא"
+    ],
+    "manufacturer": "מאמא עוף",
+    "image": "assets/products/7290008409551.jpg?h=da6e6270"
+  },
+  {
     "barcode": "7290018500361",
     "name": "לחם אחיד פרוס",
     "size": "900 גרם",
@@ -895,5 +1231,97 @@
     ],
     "manufacturer": "אנגל",
     "image": "assets/products/7290002065555.jpg?h=b329dd8f"
+  },
+  {
+    "barcode": "7290000379258",
+    "name": "חלה ארוזה",
+    "size": "500 גרם",
+    "category": "לחם",
+    "keywords": [
+      "חלה",
+      "לחם",
+      "שבת"
+    ],
+    "manufacturer": "אנג'ל",
+    "image": "assets/products/7290000379258.jpg?h=0a6e6a92"
+  },
+  {
+    "barcode": "7290017947921",
+    "name": "לחמניות המבורגר אמריקה",
+    "size": "6*85 גרם",
+    "category": "לחם",
+    "keywords": [
+      "לחמניות",
+      "המבורגר",
+      "בורגר"
+    ],
+    "manufacturer": "אנג'ל",
+    "image": "assets/products/7290017947921.jpg?h=32b28685"
+  },
+  {
+    "barcode": "7290000023809",
+    "name": "יין אדום ברקן קלאסיק קברנה",
+    "size": "750 מ\"ל",
+    "category": "שתייה",
+    "keywords": [
+      "יין",
+      "קברנה",
+      "אדום"
+    ],
+    "manufacturer": "ברקן",
+    "image": "assets/products/7290000023809.jpg?h=f1edd7bf"
+  },
+  {
+    "barcode": "7290110114961",
+    "name": "פריגת תפוזים",
+    "size": "1.5 ליטר",
+    "category": "שתייה",
+    "keywords": [
+      "פריגת",
+      "תפוזים",
+      "מיץ"
+    ],
+    "manufacturer": "פריגת",
+    "image": "assets/products/7290110114961.jpg?h=4f1cd99b"
+  },
+  {
+    "barcode": "7290110115296",
+    "name": "פאנטה אורנג'",
+    "size": "1.5 ליטר",
+    "category": "שתייה",
+    "keywords": [
+      "פאנטה",
+      "משקה",
+      "1.5"
+    ],
+    "manufacturer": "החברה המרכזית",
+    "image": "assets/products/7290110115296.jpg?h=907dfc19"
+  },
+  {
+    "barcode": "7290000688381",
+    "name": "מים מינרליים",
+    "size": "6*500 מ\"ל",
+    "category": "שתייה",
+    "keywords": [
+      "מים",
+      "שתייה",
+      "בקבוק"
+    ],
+    "manufacturer": "מי עדן",
+    "image": "assets/products/7290000688381.jpg?h=8ff477ec"
+  },
+  {
+    "barcode": "7290110115203",
+    "name": "קוקה קולה",
+    "size": "1.5 ליטר",
+    "category": "שתייה",
+    "keywords": [
+      "קולה",
+      "משקה",
+      "שתייה",
+      "מוגז"
+    ],
+    "manufacturer": "קוקה קולה",
+    "image": "assets/products/7290110115203.jpg?h=40a86e71"
   }
 ]

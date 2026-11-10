@@ -101,8 +101,8 @@ function renderProducts() {
 }
 
 // כפתור קטגוריה מסנן את הרשימה. לחיצה נוספת על אותה קטגוריה מבטלת את הסינון.
-// שתי שורות: בעליונה, ליד החיפוש, "מזון יבש" ו"לחם". בתחתונה שאר הקטגוריות.
-const TOP_CATEGORIES = ["מזון יבש", "לחם"];
+// שתי שורות: בעליונה, ליד החיפוש, "שתייה", "מזון יבש" ו"לחם". בתחתונה שאר הקטגוריות.
+const TOP_CATEGORIES = ["שתייה", "מזון יבש", "לחם"];
 
 function renderCategories() {
   const top = $("categories-top");
@@ -554,7 +554,7 @@ async function loadAutoBasket() {
 async function init() {
   try {
     [products, chains] = await Promise.all([
-      loadJson("data/products.json?v=58"),
+      loadJson("data/products.json?v=59"),
       loadJson("data/chains.json?v=13"),
     ]);
   } catch {
