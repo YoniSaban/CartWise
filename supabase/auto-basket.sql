@@ -40,13 +40,13 @@ begin
   delete from public.auto_basket where true;
 
   insert into public.auto_basket (city, barcode, position, chains_found, chains_total)
-  select city, barcode, rn, found, total
+  select city, barcode, rn, n_found, total
   from (
     select f.*,
-           row_number() over (partition by city order by found desc, priority) as rn,
-           count(*) filter (where found = total) over (partition by city) as full_count
+           row_number() over (partition by city order by n_found desc, priority) as rn,
+           count(*) filter (where n_found = total) over (partition by city) as full_count
     from (
-      select t.city, t.total, k.barcode, k.priority, count(distinct i.chain_id)::int as found
+      select t.city, t.total, k.barcode, k.priority, count(distinct i.chain_id)::int as n_found
       from (select city, count(*)::int as total from public.auto_basket_branches group by city) t
       join public.auto_basket_branches b on b.city = t.city
       join public.chain_items i on i.chain_id = b.chain_id and i.price > 0
