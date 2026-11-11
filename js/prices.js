@@ -16,9 +16,9 @@ export async function fetchPrices(barcodes, chainIds) {
   return res.json();
 }
 
-// הסל האוטומטי: נבנה ב-Supabase מחדש אחרי כל עדכון מחירים. מחזיר רשימת ברקודים לפי הסדר
-export async function fetchAutoBasket() {
-  const params = new URLSearchParams({ select: "barcode,position", order: "position.asc" });
+// הסל האוטומטי של העיר: נבנה ב-Supabase מחדש אחרי כל עדכון מחירים. מחזיר רשימת ברקודים לפי הסדר
+export async function fetchAutoBasket(city) {
+  const params = new URLSearchParams({ select: "barcode,position", city: `eq.${city}`, order: "position.asc" });
   const res = await fetch(`${SUPABASE_URL}/rest/v1/auto_basket?${params}`, {
     headers: { apikey: SUPABASE_PUBLISHABLE_KEY },
   });

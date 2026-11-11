@@ -1,6 +1,7 @@
--- סל אוטומטי: נבנה מחדש אחרי כל עדכון מחירים של רשת (טריגר על chain_items)
--- כלל: מוצרים מהקטלוג שנמצאים בכל הרשתות, לפי סדר העדיפות, עד 25.
--- אם יש פחות מ-15 כאלה, משלימים ל-15 עם המוצרים שנמצאים בהכי הרבה רשתות.
+-- סל אוטומטי, לכל עיר בנפרד: נבנה מחדש אחרי כל עדכון מחירים של סניף (טריגר על chain_items).
+-- כלל: מוצרים מהקטלוג שנמצאים בכל הסניפים של העיר, לפי סדר העדיפות, עד 25.
+-- אם יש פחות מ-15 כאלה, משלימים ל-15 עם המוצרים שנמצאים בהכי הרבה סניפים.
+-- הרשימות עצמן (מוצרים וסניפים): supabase/auto-basket-candidates.sql
 
 create table if not exists public.auto_basket_candidates (
   barcode text primary key,
@@ -8,15 +9,23 @@ create table if not exists public.auto_basket_candidates (
   priority int not null
 );
 
+create table if not exists public.auto_basket_branches (
+  chain_id text primary key,
+  city text not null
+);
+
 create table if not exists public.auto_basket (
-  barcode text primary key,
+  city text not null,
+  barcode text not null,
   position int not null,
   chains_found int not null,
   chains_total int not null,
-  built_at timestamptz not null default now()
+  built_at timestamptz not null default now(),
+  primary key (city, barcode)
 );
 
 alter table public.auto_basket_candidates enable row level security;
+alter table public.auto_basket_branches enable row level security;
 alter table public.auto_basket enable row level security;
 drop policy if exists "auto_basket public read" on public.auto_basket;
 create policy "auto_basket public read" on public.auto_basket for select to anon, authenticated using (true);
@@ -27,32 +36,25 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
-declare
-  total int;
 begin
-  select count(distinct chain_id) into total from public.chain_items;
-
   delete from public.auto_basket where true;
 
-  insert into public.auto_basket (barcode, position, chains_found, chains_total)
-  select barcode, row_number() over (order by full_match desc, found desc, priority), found, total
+  insert into public.auto_basket (city, barcode, position, chains_found, chains_total)
+  select city, barcode, rn, found, total
   from (
-    select c.barcode, c.priority,
-           count(distinct i.chain_id)::int as found,
-           count(distinct i.chain_id) = total as full_match
-    from public.auto_basket_candidates c
-    left join public.chain_items i on i.item_code = c.barcode and i.price > 0
-    group by c.barcode, c.priority
-  ) s
-  where found > 0
-  order by full_match desc, found desc, priority
-  limit greatest(
-    15,
-    least(25, (select count(*) from (
-      select c.barcode from public.auto_basket_candidates c
-      join public.chain_items i on i.item_code = c.barcode and i.price > 0
-      group by c.barcode having count(distinct i.chain_id) = total) f))
-  );
+    select f.*,
+           row_number() over (partition by city order by found desc, priority) as rn,
+           count(*) filter (where found = total) over (partition by city) as full_count
+    from (
+      select t.city, t.total, k.barcode, k.priority, count(distinct i.chain_id)::int as found
+      from (select city, count(*)::int as total from public.auto_basket_branches group by city) t
+      join public.auto_basket_branches b on b.city = t.city
+      join public.chain_items i on i.chain_id = b.chain_id and i.price > 0
+      join public.auto_basket_candidates k on k.barcode = i.item_code
+      group by t.city, t.total, k.barcode, k.priority
+    ) f
+  ) r
+  where rn <= greatest(15, least(25, full_count));
 end;
 $$;
 

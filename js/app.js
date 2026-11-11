@@ -1,6 +1,6 @@
 // מעבר בין מסכים: "בניית הסל", "המלצת חלופות" ו"פלט תוצאות"
 import * as basket from "./basket.js?v=12";
-import { fetchAutoBasket, fetchPrices } from "./prices.js?v=13";
+import { fetchAutoBasket, fetchPrices } from "./prices.js?v=14";
 import { compareBasket, formatPrice, parseChainSize, parseSizeText, unitPrice } from "./compare.js?v=13";
 import { findSubstitutes } from "./substitutes.js?v=12";
 
@@ -538,9 +538,15 @@ async function loadJson(path) {
   return res.json();
 }
 
+async function refreshAutoBasket() {
+  autoBarcodes = await loadAutoBasket();
+  $("btn-auto").textContent = `🛒 סל אוטומטי ל${$("city").value}: ${countText(autoBarcodes.length)}`;
+  $("btn-auto").hidden = autoBarcodes.length === 0;
+}
+
 async function loadAutoBasket() {
   try {
-    const list = (await fetchAutoBasket()).filter((b) => byBarcode.has(b));
+    const list = (await fetchAutoBasket($("city").value)).filter((b) => byBarcode.has(b));
     if (list.length) return list;
   } catch {
     // ממשיכים לקובץ הגיבוי
@@ -595,9 +601,9 @@ async function init() {
   byBarcode = new Map(products.map((p) => [p.barcode, p]));
   setupCity();
   // "סל אוטומטי": נבנה ב-Supabase אחרי כל עדכון מחירים. אם לא נטען, קובץ גיבוי. אם גם הוא לא, הכפתור לא מופיע
-  autoBarcodes = await loadAutoBasket();
-  $("btn-auto").textContent = `🛒 סל אוטומטי: ${countText(autoBarcodes.length)} שיש בכל הרשתות`;
-  $("btn-auto").hidden = autoBarcodes.length === 0;
+  await refreshAutoBasket();
+  // סל אוטומטי נפרד לכל עיר: החלפת עיר טוענת את הסל של העיר החדשה
+  $("city").addEventListener("change", refreshAutoBasket);
   basket.load(new Set(byBarcode.keys()), new Set(products.filter((p) => p.unit === "kg").map((p) => p.barcode)));
   renderCategories();
   render();
