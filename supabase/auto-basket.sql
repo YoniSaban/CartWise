@@ -37,6 +37,10 @@ security definer
 set search_path = ''
 as $$
 begin
+  -- עדכון מחירים נשלח בכמה חלקים במקביל. הנעילה גורמת לבנייה לרוץ אחת אחרי השנייה,
+  -- אחרת שתי בניות מוחקות ומכניסות באותו זמן ונכשלות על כפילות (409)
+  perform pg_advisory_xact_lock(hashtext('cartwise_auto_basket'));
+
   delete from public.auto_basket where true;
 
   insert into public.auto_basket (city, barcode, position, chains_found, chains_total)
