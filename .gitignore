@@ -20,3 +20,6 @@ Design system 2/
 Thumbs.db
 desktop.ini
 .vercel
+
+# Word copies of the campaign files, kept locally only
+campaign/*.docx
