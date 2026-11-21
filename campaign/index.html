@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CartWise – בונים סל, לוחצים "השווה", ומקבלים תשובה אחת</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #FDF8F0;
+    --white: #FFFFFF;
+    --warm-cream: #FDEDD4;
+    --ink: #1F2A44;
+    --ink-muted: #5B6475;
+    --blue: #1A4B8A;
+    --blue-deep: #24466A;
+    --sky: #CBDCEE;
+    --bg-substitute: #EEF3FA;
+    --green: #1E7A45;
+    --gold: #FDC951;
+    --peach: #F9987D;
+    --green-blob: #90B880;
+    --divider: #E3E8EF;
+    --shadow-card: 0 2px 8px rgba(31,42,68,0.06);
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    --gap-section: 32px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--cream);
+    color: var(--ink);
+    font-family: "Rubik", "Segoe UI", Arial, sans-serif;
+    font-weight: 400;
+    font-size: 15px;
+    line-height: 22px;
+    text-align: right;
+    overflow-x: hidden;
+  }
+
+  img, svg { display: block; max-width: 100%; }
+
+  .visually-hidden {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 0 16px;
+  }
+
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* פס עליון */
+  .site-header { padding: 16px 0; }
+  .site-header .container { display: flex; justify-content: flex-start; }
+  .logo-surface {
+    box-sizing: content-box;
+    background: var(--white);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+    object-fit: contain;
+    border: 0;
+  }
+  .site-header img {
+    width: 40px;
+    height: 40px;
+    padding: 4px;
+  }
+
+  main > section { margin-top: var(--gap-section); }
+  main > section:first-child { margin-top: 0; }
+
+  /* כפתור ראשי */
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 52px;
+    padding: 14px 24px;
+    background: var(--blue);
+    color: var(--white);
+    font-family: inherit;
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 24px;
+    text-decoration: none;
+    border-radius: 12px;
+    text-align: center;
+  }
+  .btn:hover { background: var(--blue-deep); }
+  .btn:active { background: var(--blue-deep); transform: translateY(1px); }
+  .btn:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+  }
+
+  /* פתיחה */
+  .hero { padding-top: 8px; }
+  .hero h1 {
+    margin: 0 0 16px;
+    font-size: 28px;
+    line-height: 36px;
+    font-weight: 700;
+  }
+  .hero .subtitle {
+    margin: 0 0 24px;
+    font-size: 17px;
+    line-height: 26px;
+    max-width: 60ch;
+  }
+  .hero-art {
+    position: relative;
+    margin-top: 32px;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+  }
+  .hero-art svg { width: 100%; height: 100%; }
+
+  /* יתרונות */
+  .benefits-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .card {
+    background: var(--white);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+    padding: 20px;
+  }
+  .card--accent { border: 1px solid var(--green); }
+  .benefit .icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    background: var(--bg-substitute);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 12px;
+  }
+  .benefit .icon svg { width: 32px; height: 32px; }
+  .benefit h3 {
+    margin: 0 0 8px;
+    font-size: 20px;
+    line-height: 28px;
+    font-weight: 700;
+  }
+  .benefit p { margin: 0; }
+
+  /* שאלות נפוצות */
+  .faq-list {
+    display: grid;
+    gap: 16px;
+  }
+  .faq-item { padding: 0; }
+  .faq-item h3 {
+    margin: 0;
+    padding: 14px 20px;
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 24px;
+  }
+  .faq-item p {
+    margin: 0;
+    padding: 0 20px 18px;
+    max-width: 60ch;
+  }
+
+  /* קריאה לפעולה סופית */
+  .cta {
+    background: var(--warm-cream);
+    padding: 32px 16px;
+    text-align: center;
+  }
+  .cta-inner { max-width: 720px; margin: 0 auto; }
+  .cta p.lead { margin: 0 0 20px; color: var(--ink); text-align: center; }
+  .brand-sign {
+    margin-top: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+  .brand-sign img {
+    width: 160px;
+    height: 160px;
+    padding: 12px;
+  }
+
+  @media (min-width: 768px) {
+    :root { --gap-section: 64px; }
+
+    .hero .container {
+      display: flex;
+      align-items: center;
+      gap: 40px;
+    }
+    .hero-text { flex: 0 0 55%; }
+    .hero-art { flex: 1 1 auto; margin-top: 0; }
+    .hero .subtitle { font-size: 20px; line-height: 30px; }
+
+    .btn {
+      display: inline-flex;
+      width: auto;
+      min-width: 280px;
+      font-size: 18px;
+    }
+
+    .benefits-list { grid-template-columns: repeat(3, 1fr); gap: 24px; }
+
+    .faq-list { max-width: 720px; margin: 0 auto; }
+    .faq-item h3 { font-size: 18px; line-height: 26px; }
+    .faq-item p { font-size: 16px; line-height: 24px; }
+    .benefit p { font-size: 16px; line-height: 24px; }
+
+    .cta-wrap { padding: 0 16px; }
+    .cta {
+      max-width: 720px;
+      margin: 0 auto;
+      border-radius: var(--radius-lg);
+      padding: 48px 32px;
+    }
+    .brand-sign img { width: 200px; height: 200px; }
+  }
+
+  @media (min-width: 960px) {
+    .hero h1 { font-size: 44px; line-height: 52px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+    .btn:active { transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <img class="logo-surface" src="../assets/logo-icon.png" alt="CartWise">
+  </div>
+</header>
+
+<main>
+  <!-- פתיחה -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="container">
+      <div class="hero-text">
+        <h1 id="hero-title">בונים סל, לוחצים "השווה", ומקבלים תשובה אחת.</h1>
+        <p class="subtitle">ליד השולחן, עם רשימת הקניות ביד. אתם רואים באיזו מהרשתות שאנחנו משווים הסל שלכם הכי זול. מיד, בלי הרשמה. זה עובד כרגע בתל אביב ובהרצליה.</p>
+        <a class="btn" href="https://yonisaban.github.io/CartWise/">בונים סל ומשווים</a>
+      </div>
+      <div class="hero-art">
+        <svg viewBox="0 0 400 300" role="img" aria-label="זוג יושב ליד שולחן המטבח עם כוסות תה ופתק רשימת קניות, והטלפון ביניהם מציג תשובה אחת ברורה.">
+          <!-- כתמים אורגניים -->
+          <path d="M70 60 C120 10 220 20 260 60 C300 100 250 150 190 150 C120 150 30 110 70 60 Z" fill="#F9987D" opacity="0.35"/>
+          <path d="M250 40 C300 20 380 50 370 110 C360 160 300 150 270 120 C240 90 210 60 250 40 Z" fill="#90B880" opacity="0.35"/>
+          <!-- אבא (ימין) -->
+          <circle cx="300" cy="105" r="26" fill="#FDEDD4" stroke="#1F2A44" stroke-width="3"/>
+          <path d="M276 96 C280 76 320 74 326 98 C318 88 290 86 276 96 Z" fill="#1F2A44"/>
+          <path d="M252 200 C252 150 272 135 300 135 C328 135 348 150 348 200 Z" fill="#1A4B8A"/>
+          <!-- אמא (שמאל) -->
+          <circle cx="100" cy="105" r="26" fill="#FDEDD4" stroke="#1F2A44" stroke-width="3"/>
+          <path d="M72 112 C64 70 132 64 130 100 C124 86 98 80 84 92 C82 104 80 118 72 112 Z" fill="#5B6475"/>
+          <path d="M52 200 C52 150 72 135 100 135 C128 135 148 150 148 200 Z" fill="#24466A"/>
+          <!-- שולחן -->
+          <rect x="10" y="190" width="380" height="18" rx="6" fill="#FDEDD4" stroke="#1F2A44" stroke-width="3"/>
+          <rect x="40" y="208" width="14" height="80" fill="#FDEDD4" stroke="#1F2A44" stroke-width="3"/>
+          <rect x="346" y="208" width="14" height="80" fill="#FDEDD4" stroke="#1F2A44" stroke-width="3"/>
+          <!-- כוסות תה -->
+          <rect x="62" y="160" width="26" height="30" rx="4" fill="#FFFFFF" stroke="#1A4B8A" stroke-width="3"/>
+          <path d="M88 168 C98 168 98 182 88 182" fill="none" stroke="#1A4B8A" stroke-width="3"/>
+          <rect x="316" y="160" width="26" height="30" rx="4" fill="#FFFFFF" stroke="#1A4B8A" stroke-width="3"/>
+          <path d="M316 168 C306 168 306 182 316 182" fill="none" stroke="#1A4B8A" stroke-width="3"/>
+          <!-- פתק רשימת קניות -->
+          <g transform="rotate(-8 140 175)">
+            <rect x="118" y="150" width="44" height="40" rx="3" fill="#FFFFFF" stroke="#1F2A44" stroke-width="2"/>
+            <path d="M125 160 h28 M125 168 h22 M125 176 h26 M125 184 h16" stroke="#5B6475" stroke-width="2" stroke-linecap="round"/>
+          </g>
+          <!-- טלפון במרכז -->
+          <rect x="172" y="120" width="56" height="72" rx="8" fill="#1A4B8A"/>
+          <rect x="177" y="128" width="46" height="56" rx="4" fill="#FFFFFF"/>
+          <rect x="181" y="140" width="38" height="30" rx="4" fill="#EEF3FA"/>
+          <rect x="181" y="140" width="5" height="30" rx="2" fill="#1E7A45"/>
+          <circle cx="204" cy="155" r="9" fill="#1E7A45"/>
+          <path d="M199.5 155 l3 3 l6 -6" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- מטבעות -->
+          <ellipse cx="250" cy="186" rx="9" ry="4" fill="#FDC951" stroke="#1F2A44" stroke-width="1.5"/>
+          <ellipse cx="252" cy="181" rx="9" ry="4" fill="#FDC951" stroke="#1F2A44" stroke-width="1.5"/>
+          <!-- סל קש -->
+          <path d="M268 172 h40 l-5 18 h-30 Z" fill="#FDC951" stroke="#1F2A44" stroke-width="2.5" stroke-linejoin="round"/>
+          <path d="M276 172 C276 156 300 156 300 172" fill="none" stroke="#1F2A44" stroke-width="2.5"/>
+          <path d="M274 180 h28" stroke="#1F2A44" stroke-width="1.5"/>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- יתרונות -->
+  <section class="benefits" aria-labelledby="benefits-title">
+    <div class="container">
+      <h2 id="benefits-title" class="visually-hidden">יתרונות</h2>
+      <ul class="benefits-list">
+        <li class="card card--accent benefit">
+          <div class="icon" aria-hidden="true">
+            <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+              <path d="M5 12 l2 -6 h18 l2 6" fill="none" stroke="#1A4B8A" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M5 12 c0 2.5 4.5 2.5 4.5 0 c0 2.5 4.5 2.5 4.5 0 c0 2.5 4 2.5 4 0 c0 2.5 4.5 2.5 4.5 0 c0 2.5 4.5 2.5 4.5 0" fill="none" stroke="#1A4B8A" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M7 15 v12 h18 v-12" fill="none" stroke="#1A4B8A" stroke-width="2" stroke-linejoin="round"/>
+              <circle cx="16" cy="21" r="4.5" fill="#1E7A45"/>
+              <path d="M14 21 l1.5 1.5 l3 -3" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h3>תשובה אחת ברורה</h3>
+          <p>אתם מקבלים שם של רשת, בלי לבדוק מוצר אחרי מוצר.</p>
+        </li>
+        <li class="card benefit">
+          <div class="icon" aria-hidden="true">
+            <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+              <path d="M28 6 h-3 l-3 15 h-14 l-3 -11 h19" fill="none" stroke="#1A4B8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="10" cy="26" r="2" fill="#1A4B8A"/>
+              <circle cx="20" cy="26" r="2" fill="#1A4B8A"/>
+              <path d="M10 15 l2.5 2.5 l5 -5" fill="none" stroke="#1E7A45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h3>בלי הרשמה</h3>
+          <p>נכנסים, בונים סל ולוחצים "השווה". השירות חינם כרגע.</p>
+        </li>
+        <li class="card benefit">
+          <div class="icon" aria-hidden="true">
+            <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+              <circle cx="14" cy="14" r="9" fill="none" stroke="#1A4B8A" stroke-width="2"/>
+              <path d="M20.5 20.5 l7 7" stroke="#1A4B8A" stroke-width="2.5" stroke-linecap="round"/>
+              <path d="M10 14 l3 3 l5 -6" fill="none" stroke="#1E7A45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h3>אתם יודעים על מה אתם סומכים</h3>
+          <p>מחירי מדף, מתעדכנים פעם ביום.</p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- שאלות נפוצות -->
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="container">
+      <h2 id="faq-title" class="visually-hidden">שאלות נפוצות</h2>
+      <div class="faq-list">
+        <div class="card faq-item">
+          <h3>איפה זה עובד?</h3>
+          <p>כרגע בתל אביב ובהרצליה. אם אתם גרים במקום אחר, עוד לא נוכל להשוות לכם.</p>
+        </div>
+        <div class="card faq-item">
+          <h3>אילו רשתות מושוות?</h3>
+          <p>בתל אביב: שופרסל, טיב טעם, וולט מרקט, רמי לוי, AM:PM וקרפור. בהרצליה: שופרסל, טיב טעם וסטופ מרקט.</p>
+        </div>
+        <div class="card faq-item">
+          <h3>המחיר באפליקציה יהיה זהה למחיר בקופה?</h3>
+          <p>לא תמיד. אנחנו מראים מחירי מדף, בלי מבצעים והנחות, והם מתעדכנים פעם ביום. בקופה המחיר יכול להיות שונה.</p>
+        </div>
+        <div class="card faq-item">
+          <h3>אילו מוצרים אפשר להוסיף?</h3>
+          <p>אפשר לבחור מתוך <span class="num">100</span> מוצרים נפוצים. מה שלא ברשימה, עוד לא נכלל.</p>
+        </div>
+        <div class="card faq-item">
+          <h3>צריך להירשם או לשלם?</h3>
+          <p>כרגע אין הרשמה ואין תשלום.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- קריאה לפעולה סופית -->
+  <section class="cta-wrap">
+    <div class="cta">
+      <div class="cta-inner">
+        <p class="lead">בלי הרשמה, כרגע בלי תשלום. עובד בתל אביב ובהרצליה.</p>
+        <a class="btn" href="https://yonisaban.github.io/CartWise/">בונים סל ומשווים</a>
+        <div class="brand-sign">
+          <img class="logo-surface" src="../assets/logo.png" alt="CartWise, choose your cart wisely">
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+</body>
+</html>
