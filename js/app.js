@@ -1,7 +1,7 @@
 // מעבר בין מסכים: "בניית סל", "הסל שלי", "המלצת חלופות" ו"פלט תוצאות"
 import * as basket from "./basket.js?v=12";
 import { fetchAutoBasket, fetchPrices } from "./prices.js?v=14";
-import { compareBasket, formatPrice, parseChainSize, parseSizeText, unitPrice } from "./compare.js?v=13";
+import { compareBasket, formatPrice, parseChainSize, parseSizeText, splitBasket, unitPrice } from "./compare.js?v=14";
 import { findSubstitutes } from "./substitutes.js?v=12";
 
 const $ = (id) => document.getElementById(id);
@@ -346,6 +346,49 @@ function renderResults({ results, notFound }, counted) {
   box.append(ul);
 }
 
+// כרטיס "סל מפוצל": הסל הזול ביותר בשתי רשתות. split: מ-splitBasket, null מסתיר את הכרטיס
+function renderSplit(split) {
+  const box = $("split");
+  box.replaceChildren();
+  box.hidden = !split;
+  if (!split) return;
+  const names = split.parts.map((p) => p.chain.name).join(" + ");
+  const head = el("div", { class: "result-head" });
+  head.append(el("h2", { class: "chain-name" }, "סל מפוצל: 2 רשתות"), el("span", { class: "tag tag-split" }, "⇆ הכי זול"));
+  box.append(
+    head,
+    el("p", { class: "chain-store" }, names),
+    el("p", { class: "price" }, formatPrice(split.total)),
+    el("p", { class: "result-saving" }, split.base
+      ? `חיסכון של ${formatPrice(split.saving)} לעומת הסל הזול ברשת אחת (${split.base.name})`
+      : "משלים את כל הסל בשתי רשתות")
+  );
+  for (const part of split.parts) {
+    const sec = el("div", { class: "split-part" });
+    const ph = el("div", { class: "result-head" });
+    if (part.chain.logo) {
+      const logo = el("img", { class: "chain-logo", src: part.chain.logo, alt: "", width: 96, height: 28 });
+      logo.addEventListener("error", () => { logo.hidden = true; });
+      ph.append(logo);
+    }
+    ph.append(el("h3", { class: "chain-name" }, part.chain.name), el("span", { class: "split-subtotal" }, formatPrice(part.total)));
+    const ul = el("ul", { class: "breakdown-list" });
+    for (const { barcode, qty, amount } of part.lines) {
+      const li = el("li");
+      li.append(
+        el("span", { class: "breakdown-name" }, `${byBarcode.get(barcode).name} × ${qtyText(barcode, qty)}`),
+        el("span", { class: "breakdown-price" }, formatPrice(amount))
+      );
+      ul.append(li);
+    }
+    // רשימת המוצרים סגורה עד לחיצה, כמו "פירוט מחירים"
+    const details = el("details", { class: "breakdown" });
+    details.append(el("summary", {}, `מה קונים כאן (${countText(part.lines.length)})`), ul);
+    sec.append(ph, el("p", { class: "chain-store" }, part.chain.store_name), details);
+    box.append(sec);
+  }
+}
+
 // פירוט המחירים ברשת: שורה לכל מוצר, סגור עד לחיצה
 function breakdown(r) {
   const details = el("details", { class: "breakdown" });
@@ -386,6 +429,8 @@ function showResults(nav = "push") {
   const comparison = compareBasket(lastItems, byBarcode, chains, lastRows, approvedSubstitutes());
   const { results, notFound } = comparison;
   renderResults(comparison, lastItems.length - notFound.length);
+  const split = splitBasket(lastItems, byBarcode, chains, lastRows);
+  renderSplit(split);
   $("not-found-section").hidden = false;
   const best = results.find((r) => r.cheapest);
   const lost = !notFound.length ? ""
@@ -397,6 +442,7 @@ function showResults(nav = "push") {
   else if (bestPartial) announce(`אין רשת עם סל מלא${partialText}${lost}`);
   else if (notFound.length < lastItems.length) announce(`התוצאות מוכנות. אין רשת עם סל מלא${lost}`);
   else announce("אף מוצר בסל לא נמצא ברשתות");
+  if (split) announce(`סל מפוצל: ${split.parts.map((p) => p.chain.name).join(" ו")}, ${formatPrice(split.total)}`);
 }
 
 function decisionText(value) {
@@ -507,20 +553,27 @@ async function compare() {
   showScreen("screen-results");
   $("results").replaceChildren();
   $("not-found-section").hidden = true;
+  $("split").hidden = true;
   $("results-status").textContent = "מחשבים את עלות הסל...";
   $("results-title").focus();
+  $("results-loader").hidden = false;
+  // העגלה מוצגת לפחות שנייה, כדי שלא תהבהב כשהמחירים מגיעים מהר
+  const minShow = new Promise((r) => setTimeout(r, 1000));
 
   try {
     const codes = [...new Set(items.flatMap(({ barcode }) => {
       const p = byBarcode.get(barcode);
       return [p.barcode, ...Object.values(p.chain_codes || {})];
     }))];
-    lastRows = await fetchPrices(codes, chains.map((c) => c.chain_id));
+    [lastRows] = await Promise.all([fetchPrices(codes, chains.map((c) => c.chain_id)), minShow]);
     lastItems = items;
   } catch {
+    $("results-loader").hidden = true;
     $("results-status").textContent = "לא הצלחנו לטעון את המחירים. בדקו את החיבור ונסו שוב.";
     return;
   }
+
+  $("results-loader").hidden = true;
 
   // מוצר שחסר ברשת אחת לפחות (ולא בכולן) מוביל למסך החלופות. אחרת ישר לתוצאות.
   const { results } = compareBasket(lastItems, byBarcode, chains, lastRows);

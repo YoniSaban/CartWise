@@ -85,6 +85,42 @@ export function compareBasket(items, products, chains, rows, approved = new Map(
   return { results, notFound };
 }
 
+// סל מפוצל: הסל הזול ביותר בשתי רשתות לכל היותר. בלי חלופות, רק מחירים מהמאגר.
+// בכל זוג רשתות כל מוצר הולך לרשת הזולה מבין השתיים. זוג נחשב רק אם הוא מכסה את כל המוצרים
+// שנמצאו ברשת כלשהי. מחזיר null אם אין זוג כזה, או אם הפיצול לא זול מרשת אחת עם סל מלא.
+// אחרת { total, saving, base, parts: [{ chain, total, lines: [{ barcode, qty, amount }] }] }
+// base: הרשת הזולה עם סל מלא (או null), saving: ההפרש מולה באגורות
+export function splitBasket(items, products, chains, rows) {
+  const { results } = compareBasket(items, products, chains, rows);
+  const complete = results.filter((r) => r.complete);
+  const base = complete.length ? complete.reduce((a, b) => (b.total < a.total ? b : a)) : null;
+
+  let best = null;
+  for (let i = 0; i < results.length; i++) {
+    for (let j = i + 1; j < results.length; j++) {
+      const [a, b] = [results[i], results[j]];
+      const parts = [{ chain: a.chain, total: 0, lines: [] }, { chain: b.chain, total: 0, lines: [] }];
+      let ok = a.lines.length > 0;
+      a.lines.forEach((la, k) => {
+        const lb = b.lines[k];
+        if (la.amount == null && lb.amount == null) { ok = false; return; }
+        // מחיר שווה: נשאר ברשת הראשונה
+        const side = lb.amount == null || (la.amount != null && la.amount <= lb.amount) ? 0 : 1;
+        const line = side === 0 ? la : lb;
+        parts[side].lines.push({ barcode: line.barcode, qty: line.qty, amount: line.amount });
+        parts[side].total += line.amount;
+      });
+      // זוג שכל המוצרים בו מרשת אחת הוא בעצם רשת אחת, לא פיצול
+      if (!ok || parts.some((p) => !p.lines.length)) continue;
+      const total = parts[0].total + parts[1].total;
+      if (!best || total < best.total) best = { total, parts };
+    }
+  }
+  if (!best || (base && best.total >= base.total)) return null;
+  best.parts.sort((x, y) => y.lines.length - x.lines.length);
+  return { ...best, base: base?.chain ?? null, saving: base ? base.total - best.total : 0 };
+}
+
 // גודל אריזה לגרם, מ"ל או יחידה: "1.5 ליטר" -> { amount: 1500, base: "ml" }. לא מזוהה: null
 const UNITS = [
   [/^(ק"?ג|קג|קילו|קילוגרם|kg)$/i, 1000, "g"],

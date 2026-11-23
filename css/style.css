@@ -540,7 +540,7 @@ button[aria-disabled="true"] { cursor: default; }
   margin: 8px auto 4px;
   overflow: hidden;
 }
-.cart-loader:not([hidden]) + #subs-status { text-align: center; }
+.cart-loader:not([hidden]) + .note { text-align: center; }
 .cart-loader[hidden] { display: none; }
 .cl-cart {
   position: absolute;
@@ -593,3 +593,12 @@ button[aria-disabled="true"] { cursor: default; }
   .cl-cart, .cl-road { animation: none; }
   .cl-item { display: none; }
 }
+
+/* סל מפוצל: הסל הזול ביותר בשתי רשתות, מעל רשימת הרשתות */
+.card.split { display: grid; gap: 2px; margin-top: 8px; padding: 16px; border: 2px dashed var(--green); }
+.card.split[hidden] { display: none; }
+.split .result-head h2 { font-size: 17px; }
+.tag-split { color: var(--white); background: var(--green); }
+.split-part { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--field-border); }
+.split-subtotal { margin-right: auto; font-weight: 700; direction: ltr; } /* ltr הופך את inline-start, לכן margin פיזי */
+.split .breakdown-list { margin-top: 6px; }
