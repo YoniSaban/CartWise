@@ -537,6 +537,7 @@ async function compare() {
   $("subs-bulk").hidden = true;
   $("btn-to-results").disabled = true;
   $("subs-status").textContent = "מחפשים חלופות ברשתות...";
+  $("subs-loader").hidden = false;
   $("subs-title").focus();
   // למוצרים במשקל אין חלופות בגרסה הזו: הם לא נשלחים לבדיקה, והכרטיס שלהם "חסר ברשת"
   const ask = subsPairs.filter(({ barcode }) => byBarcode.get(barcode).unit !== "kg");
@@ -548,6 +549,7 @@ async function compare() {
       ? "היו הרבה השוואות בזמן קצר. אפשר להמשיך לתוצאות עם סל חלקי, ולנסות חלופות שוב בעוד כמה דקות."
       : "לא הצלחנו לבדוק חלופות כרגע. אפשר להמשיך לתוצאות עם סל חלקי.";
   }
+  $("subs-loader").hidden = true;
   renderSubs(subsPairs);
   $("btn-to-results").disabled = false;
   const offered = [...suggestions.values()].filter((s) => s.item).length;
