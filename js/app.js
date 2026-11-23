@@ -1,4 +1,4 @@
-// מעבר בין מסכים: "בניית הסל", "המלצת חלופות" ו"פלט תוצאות"
+// מעבר בין מסכים: "בניית סל", "הסל שלי", "המלצת חלופות" ו"פלט תוצאות"
 import * as basket from "./basket.js?v=12";
 import { fetchAutoBasket, fetchPrices } from "./prices.js?v=14";
 import { compareBasket, formatPrice, parseChainSize, parseSizeText, unitPrice } from "./compare.js?v=13";
@@ -82,9 +82,9 @@ function renderProducts() {
       class: "product-add",
       "data-action": "add",
       "data-barcode": p.barcode,
-      "aria-label": inBasket ? `${p.name} כבר בסל` : `הוסף ${p.name} לסל`,
-      // מוצר שכבר בסל: הכפתור נשאר בפוקוס (לא disabled), כדי שאפשר יהיה להמשיך בגריד
-      "aria-disabled": inBasket ? "true" : false,
+      // לחיצה על מוצר שכבר בסל מוציאה אותו מהסל
+      "aria-label": inBasket ? `${p.name} בסל. לחצו כדי להסיר` : `הוסף ${p.name} לסל`,
+      "aria-pressed": String(inBasket),
     });
     btn.append(
       el("img", { src: p.image, alt: p.name, loading: "lazy", width: 200, height: 200 }),
@@ -150,13 +150,18 @@ function renderBasket() {
     list.append(li);
   }
 
-  $("basket-title").textContent = `הסל שלי (${countText(items.length)})`;
-  $("basket-empty").hidden = items.length > 0;
+  const n = items.length;
+  $("basket-count").textContent = n ? countText(n) : "הסל ריק";
+  $("basket-empty").hidden = n > 0;
+  $("btn-to-basket").textContent = `הסל שלי (${n})`;
+  $("btn-to-basket").setAttribute("aria-label", `הסל שלי, ${n ? countText(n) : "ריק"}`);
 
-  const compare = $("btn-compare");
-  compare.disabled = items.length === 0;
-  compare.textContent = items.length ? `השווה (${countText(items.length)})` : "השווה (סל ריק)";
-  $("btn-clear").disabled = items.length === 0;
+  // "השווה" ו"נקה סל" רק בדף "הסל שלי"
+  document.querySelectorAll(".js-compare").forEach((btn) => {
+    btn.disabled = n === 0;
+    btn.textContent = n ? `השווה (${countText(n)})` : "השווה (סל ריק)";
+  });
+  document.querySelectorAll(".js-clear").forEach((btn) => (btn.disabled = n === 0));
 }
 
 function render() {
@@ -178,12 +183,16 @@ function handleClick(event) {
   const { action, barcode } = btn.dataset;
   const name = byBarcode.get(barcode)?.name;
 
+  const removeIndex = action === "remove"
+    ? [...document.querySelectorAll('#basket [data-action="remove"]')].indexOf(btn) : 0;
+
   if (action === "add") {
-    // הוספה משאירה את המשתמש בגריד של המוצרים, על אותו כרטיס
-    if (basket.has(barcode)) return announce(`${name} כבר בסל`);
-    basket.add(barcode);
+    // לחיצה מוסיפה, לחיצה נוספת מסירה. המשתמש נשאר בגריד, על אותו כרטיס
+    const had = basket.has(barcode);
+    if (had) basket.remove(barcode);
+    else basket.add(barcode);
     render();
-    announce(`${name} נוסף לסל. בסל ${countText(basket.items().length)}`);
+    announce(`${name} ${had ? "הוסר מהסל" : "נוסף לסל"}. בסל ${countText(basket.items().length)}`);
     focusButton("add", barcode);
   } else if (action === "inc" || action === "dec") {
     basket.changeQty(barcode, action === "inc" ? 1 : -1);
@@ -195,7 +204,9 @@ function handleClick(event) {
     basket.remove(barcode);
     render();
     announce(`${name} הוסר מהסל. בסל ${countText(basket.items().length)}`);
-    if (!focusButton("add", barcode)) $("search").focus();
+    // הפוקוס עובר ל"הסר" של המוצר הבא בסל, ואם אין, לכותרת הדף
+    const removes = [...document.querySelectorAll('#basket [data-action="remove"]')];
+    (removes[0] ? removes[Math.min(removeIndex, removes.length - 1)] : $("basket-title")).focus({ preventScroll: true });
   }
 }
 
@@ -208,6 +219,13 @@ function showScreen(id, nav = "push") {
   const depth = history.state?.depth ?? 0;
   if (nav === "push" && history.state?.screen !== id) history.pushState({ screen: id, depth: depth + 1 }, "");
   else if (nav === "replace") history.replaceState({ screen: id, depth }, "");
+}
+
+// מעבר לדף "הסל שלי", עם רישום בהיסטוריה: "חזרה" של הטלפון מחזיר לגריד
+function goBasket() {
+  showScreen("screen-basket");
+  render();
+  $("basket-title").focus();
 }
 
 // חזרה לבניית הסל: אחורה בהיסטוריה עד המסך הראשון, כדי שהיסטוריה לא תתארך
@@ -226,10 +244,14 @@ function handlePopState(event) {
     $("subs-title").focus();
   } else if (screen === "screen-results" && lastItems.length) {
     showResults("none");
+  } else if (screen === "screen-basket") {
+    showScreen("screen-basket", "none");
+    render();
+    $("basket-title").focus();
   } else {
     showScreen("screen-build", "none");
     render();
-    $("btn-compare").focus();
+    $("build-title").focus({ preventScroll: true });
   }
 }
 
@@ -540,7 +562,9 @@ async function loadJson(path) {
 
 async function refreshAutoBasket() {
   autoBarcodes = await loadAutoBasket();
-  $("btn-auto").textContent = `🛒 סל אוטומטי ל${$("city").value}: ${countText(autoBarcodes.length)}`;
+  // טקסט קצר, כדי שייכנס בשורה אחת ליד "נקה סל". העיר נשמעת בקורא המסך
+  $("btn-auto").textContent = `🛒 סל אוטומטי (${autoBarcodes.length})`;
+  $("btn-auto").setAttribute("aria-label", `סל אוטומטי ל${$("city").value}: ${countText(autoBarcodes.length)}`);
   $("btn-auto").hidden = autoBarcodes.length === 0;
 }
 
@@ -626,33 +650,39 @@ async function init() {
   });
   $("products").addEventListener("click", handleClick);
   $("basket").addEventListener("click", handleClick);
-  $("btn-compare").addEventListener("click", compare);
+  document.querySelectorAll(".js-compare").forEach((btn) => btn.addEventListener("click", compare));
+  $("btn-to-basket").addEventListener("click", goBasket);
+  $("btn-basket-back").addEventListener("click", goBuild);
   $("subs").addEventListener("click", handleDecision);
   $("btn-approve-all").addEventListener("click", () => decideAll("approved"));
   $("btn-reject-all").addEventListener("click", () => decideAll("rejected"));
   $("btn-to-results").addEventListener("click", () => showResults());
   $("btn-subs-back").addEventListener("click", goBuild);
   // אישור בתוך הדף (לחיצה שנייה), כי confirm() חסום בחלק מהדפדפנים המובנים באפליקציות
-  let clearTimer = null;
-  const resetClear = () => {
-    clearTimeout(clearTimer);
-    clearTimer = null;
-    $("btn-clear").textContent = "נקה סל";
-    $("btn-clear").classList.remove("confirming");
-  };
-  $("btn-clear").addEventListener("click", () => {
-    if (!clearTimer) {
-      $("btn-clear").textContent = "בטוח? לחץ שוב";
-      $("btn-clear").classList.add("confirming");
-      announce("לחץ שוב על הכפתור כדי לנקות את הסל");
-      clearTimer = setTimeout(resetClear, 4000);
-      return;
-    }
-    resetClear();
-    basket.clear();
-    render();
-    announce("הסל רוקן");
-    $("search").focus();
+  // כל כפתור "נקה סל" מחזיק אישור משלו
+  document.querySelectorAll(".js-clear").forEach((btn) => {
+    let clearTimer = null;
+    const resetClear = () => {
+      clearTimeout(clearTimer);
+      clearTimer = null;
+      btn.textContent = "נקה סל";
+      btn.classList.remove("confirming");
+    };
+    btn.addEventListener("click", () => {
+      if (!clearTimer) {
+        btn.textContent = "בטוח? לחץ שוב";
+        btn.classList.add("confirming");
+        announce("לחץ שוב על הכפתור כדי לנקות את הסל");
+        clearTimer = setTimeout(resetClear, 4000);
+        return;
+      }
+      resetClear();
+      basket.clear();
+      render();
+      announce("הסל רוקן");
+      // בבניית סל: לחיפוש. בדף "הסל שלי": לכותרת
+      (btn.closest("#screen-basket") ? $("basket-title") : $("search")).focus({ preventScroll: true });
+    });
   });
   // מוסיף לסל את מוצרי הסל האוטומטי שעוד לא בו. מה שכבר בסל נשאר כמו שהוא
   $("btn-auto").addEventListener("click", () => {
@@ -662,7 +692,6 @@ async function init() {
     announce(missing.length
       ? `נוספו ${countText(missing.length)} מהסל האוטומטי. בסל ${countText(basket.items().length)}`
       : "כל המוצרים של הסל האוטומטי כבר בסל");
-    $("basket-title").scrollIntoView({ behavior: "smooth", block: "start" });
   });
   $("btn-back").addEventListener("click", goBuild);
   history.replaceState({ screen: "screen-build", depth: 0 }, "");

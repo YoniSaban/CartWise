@@ -164,9 +164,8 @@ h2 { margin: 24px 0 8px; font-size: 16px; font-weight: 700; }
 /* רשימות וכרטיסים */
 .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 
+/* הגריד ממלא את הדף, והפס של "השווה" דבוק מתחתיו */
 .products {
-  max-height: 50vh;
-  overflow-y: auto;
   padding: 4px;
   margin: 0 -4px;
   border-radius: 16px;
@@ -287,8 +286,10 @@ button:disabled { cursor: default; }
 }
 
 /* כפתור "סל אוטומטי": ממלא את הסל ברשימה שנבנית אחרי כל עדכון מחירים */
-.btn-auto { display: block; width: 100%; height: 48px; margin: 0 0 16px; }
+.auto-row { display: flex; gap: 8px; margin: 0 0 16px; }
+.btn-auto { display: block; flex: 1 1 auto; height: 48px; }
 .btn-auto[hidden] { display: none; }
+.auto-row .btn-clear { height: 48px; margin-inline-start: auto; }
 
 .btn-secondary:disabled {
   color: var(--green);
@@ -414,6 +415,28 @@ h1:focus { outline: none; }
   background: var(--cream);
   box-shadow: 0 -8px 8px -8px rgba(31, 42, 68, 0.12);
 }
+
+/* בניית סל: כפתור "הסל שלי" בפס דבוק לתחתית, מעל הגריד */
+.action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+  padding: 12px 0 16px;
+  background: var(--cream);
+  box-shadow: 0 -8px 8px -8px rgba(31, 42, 68, 0.12);
+}
+.action-bar .btn-to-basket { flex: 1 1 auto; }
+
+#basket-empty { margin-bottom: 8px; }
+
+/* הסל שלי: "חזרה" צר, מימין ל"השווה" */
+.btn-basket-back { height: 52px; padding: 0 12px; }
+#screen-basket .action-row { gap: 8px; }
+#screen-basket .btn-compare { flex: 1 1 auto; padding: 0 8px; }
 
 /* המלצת חלופות: כרטיס לכל מוצר שחסר ברשת */
 .subs { margin-top: 8px; }
