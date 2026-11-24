@@ -1,5 +1,5 @@
 -- סל אוטומטי, לכל עיר בנפרד: נבנה מחדש אחרי כל עדכון מחירים של סניף (טריגר על chain_items).
--- כלל: מוצרים מהקטלוג שנמצאים בכל הסניפים של העיר, לפי סדר העדיפות, עד 25.
+-- כלל: מוצרים מהקטלוג שנמצאים (וזמינים) בכל הסניפים של העיר, לפי סדר העדיפות, עד 25.
 -- אם יש פחות מ-15 כאלה, משלימים ל-15 עם המוצרים שנמצאים בהכי הרבה סניפים.
 -- הרשימות עצמן (מוצרים וסניפים): supabase/auto-basket-candidates.sql
 
@@ -53,7 +53,12 @@ begin
       select t.city, t.total, k.barcode, k.priority, count(distinct i.chain_id)::int as n_found
       from (select city, count(*)::int as total from public.auto_basket_branches group by city) t
       join public.auto_basket_branches b on b.city = t.city
+      -- העדכון האחרון של הסניף. מוצר ששורתו ישנה ממנו ביותר מ-12 שעות ירד מהקובץ: "לא זמין"
+      cross join lateral (
+        select max(x.loaded_at) as latest from public.chain_items x where x.chain_id = b.chain_id
+      ) u
       join public.chain_items i on i.chain_id = b.chain_id and i.price > 0
+        and i.loaded_at >= u.latest - interval '12 hours'
       join public.auto_basket_candidates k on k.barcode = i.item_code
       group by t.city, t.total, k.barcode, k.priority
     ) f
