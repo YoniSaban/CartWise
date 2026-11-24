@@ -2818,6 +2818,130 @@
       "parameters": {
         "jsCode": "// הענף נכשל: לא נכתב כלום, והמחירים הקודמים נשארים. ההודעה נשמרת ביומן ההרצות\nreturn [{ json: { chain: 'stop_market', failed_at: new Date().toISOString(), error: $input.first().json.error || $input.first().json } }];"
       }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10 * * *"
+            }
+          ]
+        }
+      },
+      "name": "מייל: כל יום ב-10:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        3800
+      ],
+      "id": "mail1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 10:00: סניפים שלא התעדכנו היום. אם כולם התעדכנו, לא נשלח מייל\n// קריאה בלבד: קבצי האתר החי והמפתח הציבורי של Supabase מתוך config.js שבאתר. אין כאן סוד\nconst BASE = 'https://yonisaban.github.io/CartWise/';\nconst get = (url, headers = {}, full = false) =>\n  this.helpers.httpRequest({ url, headers, returnFullResponse: full, json: !full });\nconst config = await this.helpers.httpRequest({ url: BASE + 'js/config.js', json: false });\nconst url = String(config).match(/SUPABASE_URL\\s*=\\s*[\"']([^\"']+)/)?.[1];\nconst key = String(config).match(/SUPABASE_PUBLISHABLE_KEY\\s*=\\s*[\"']([^\"']+)/)?.[1];\nif (!url || !key) throw new Error('config.js: Supabase settings not found');\nconst rest = `${url}/rest/v1/chain_items`;\nconst headers = { apikey: key };\nconst chains = await get(BASE + 'data/chains.json?t=' + Date.now());\nconst ilDay = (d) => new Date(d).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });\nconst heTime = (d) => new Date(d).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });\nconst esc = (s) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));\nconst latest = {};\nfor (const c of chains) {\n  const rows = await get(`${rest}?select=loaded_at&chain_id=eq.${c.chain_id}&order=loaded_at.desc&limit=1`, headers);\n  latest[c.chain_id] = rows[0]?.loaded_at ?? null;\n}\nconst today = ilDay(Date.now());\nconst late = chains.filter((c) => !latest[c.chain_id] || ilDay(latest[c.chain_id]) !== today);\nif (!late.length) return [];\nconst rows = late.map((c, i) => `<tr><td>${i + 1}</td><td>${esc(c.city)}</td><td>${esc(c.name)}</td><td>${esc(c.store_name)}</td><td>${latest[c.chain_id] ? heTime(latest[c.chain_id]) : 'אף פעם'}</td></tr>`).join('');\nconst html = `<div dir=\"rtl\" style=\"font-family:Arial,sans-serif\">\n<p>הסניפים האלה לא התעדכנו היום עד 10:00. האתר מציג בהם את המחירים הקודמים.</p>\n<table border=\"1\" cellpadding=\"6\" style=\"border-collapse:collapse;direction:rtl\">\n<tr><th>מס'</th><th>עיר</th><th>רשת</th><th>סניף</th><th>עדכון אחרון</th></tr>${rows}</table>\n<p>n8n ינסה שוב בכל שעה עגולה עד 18:00.</p></div>`;\nreturn [{ json: { subject: `סל חכם: ${late.length} סניפים לא התעדכנו עד 10:00`, html } }];\n"
+      },
+      "name": "מייל: מי לא התעדכן עד 10:00",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        3800
+      ],
+      "id": "mail2"
+    },
+    {
+      "parameters": {
+        "fromEmail": "סל חכם <__ALERT_FROM__>",
+        "toEmail": "__ALERT_TO__",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "html",
+        "html": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "name": "מייל: שליחת התראה",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        480,
+        3800
+      ],
+      "id": "mail3",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "smtp": {
+          "id": "__SMTP_ID__",
+          "name": "Gmail SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 9-17 * * *"
+            }
+          ]
+        }
+      },
+      "name": "מייל: בדיקה כל שעה ב-:30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        4000
+      ],
+      "id": "mail4"
+    },
+    {
+      "parameters": {
+        "jsCode": "// טבלת מוצרים לכל סניף. נשלחת רק אם סניף כלשהו התעדכן מאז המייל הקודם\n// קריאה בלבד: קבצי האתר החי והמפתח הציבורי של Supabase מתוך config.js שבאתר. אין כאן סוד\nconst BASE = 'https://yonisaban.github.io/CartWise/';\nconst get = (url, headers = {}, full = false) =>\n  this.helpers.httpRequest({ url, headers, returnFullResponse: full, json: !full });\nconst config = await this.helpers.httpRequest({ url: BASE + 'js/config.js', json: false });\nconst url = String(config).match(/SUPABASE_URL\\s*=\\s*[\"']([^\"']+)/)?.[1];\nconst key = String(config).match(/SUPABASE_PUBLISHABLE_KEY\\s*=\\s*[\"']([^\"']+)/)?.[1];\nif (!url || !key) throw new Error('config.js: Supabase settings not found');\nconst rest = `${url}/rest/v1/chain_items`;\nconst headers = { apikey: key };\nconst chains = await get(BASE + 'data/chains.json?t=' + Date.now());\nconst ilDay = (d) => new Date(d).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });\nconst heTime = (d) => new Date(d).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });\nconst esc = (s) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));\nconst latest = {};\nfor (const c of chains) {\n  const rows = await get(`${rest}?select=loaded_at&chain_id=eq.${c.chain_id}&order=loaded_at.desc&limit=1`, headers);\n  latest[c.chain_id] = rows[0]?.loaded_at ?? null;\n}\nconst today = ilDay(Date.now());\nconst memory = $getWorkflowStaticData('global');\nconst previous = memory.tableSent || null;\nif (previous && chains.every((c) => previous[c.chain_id] === latest[c.chain_id])) return [];\nconst products = await get(BASE + 'data/products.json?t=' + Date.now());\nconst lines = [];\nconst late = [];\nfor (const [i, c] of chains.entries()) {\n  if (!latest[c.chain_id]) continue;\n  const at = encodeURIComponent(latest[c.chain_id]);\n  const res = await get(`${rest}?select=item_code&chain_id=eq.${c.chain_id}&loaded_at=eq.${at}&limit=1`, { ...headers, Prefer: 'count=exact' }, true);\n  const total = Number(String(res.headers['content-range'] || '').split('/')[1]);\n  const codes = products.map((p) => (p.chain_codes ? p.chain_codes[c.codes_from || c.chain_id] : p.barcode)).filter(Boolean);\n  const found = await get(`${rest}?select=item_code&chain_id=eq.${c.chain_id}&loaded_at=eq.${at}&item_code=in.(${codes.join(',')})`, headers);\n  const count = new Set(found.map((r) => r.item_code)).size;\n  if (ilDay(latest[c.chain_id]) !== today) late.push(`${c.name} ${c.city || ''}`.trim());\n  lines.push(`<tr><td>${i + 1}</td><td>${esc(c.city)}</td><td>${esc(c.name)}</td><td>${esc(c.store_name)}</td><td>${Number.isFinite(total) ? total.toLocaleString('en-US') : '?'}</td><td>${count}</td><td>${heTime(latest[c.chain_id])}</td></tr>`);\n}\nconst html = `<div dir=\"rtl\" style=\"font-family:Arial,sans-serif\">\n<p><b>טבלת מוצרים לפי סניף</b></p>\n<table border=\"1\" cellpadding=\"6\" style=\"border-collapse:collapse;direction:rtl\">\n<tr><th>מס'</th><th>עיר</th><th>רשת</th><th>סניף</th><th>מוצרים בקובץ המחירים</th><th>מוצרי האפליקציה שנמצאו (מתוך ${products.length})</th><th>עודכן</th></tr>${lines.join('')}</table>\n${late.length ? `<p>לא עודכנו היום, ונשארו עם המחירים הקודמים: ${esc(late.join(', '))}.</p>` : ''}</div>`;\nmemory.tableSent = latest;\nreturn [{ json: { subject: 'סל חכם: טבלת מוצרים אחרי עדכון מחירים', html } }];\n"
+      },
+      "name": "מייל: טבלת מוצרים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        4000
+      ],
+      "id": "mail5"
+    },
+    {
+      "parameters": {
+        "fromEmail": "סל חכם <__ALERT_FROM__>",
+        "toEmail": "__ALERT_TO__",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "html",
+        "html": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "name": "מייל: שליחת טבלה",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        480,
+        4000
+      ],
+      "id": "mail6",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "smtp": {
+          "id": "__SMTP_ID__",
+          "name": "Gmail SMTP"
+        }
+      }
     }
   ],
   "connections": {
@@ -4792,6 +4916,50 @@
         [
           {
             "node": "סטופ מרקט: נכשל",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "מייל: כל יום ב-10:00": {
+      "main": [
+        [
+          {
+            "node": "מייל: מי לא התעדכן עד 10:00",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "מייל: מי לא התעדכן עד 10:00": {
+      "main": [
+        [
+          {
+            "node": "מייל: שליחת התראה",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "מייל: בדיקה כל שעה ב-:30": {
+      "main": [
+        [
+          {
+            "node": "מייל: טבלת מוצרים",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "מייל: טבלת מוצרים": {
+      "main": [
+        [
+          {
+            "node": "מייל: שליחת טבלה",
             "type": "main",
             "index": 0
           }

@@ -16,6 +16,19 @@ export async function fetchPrices(barcodes, chainIds) {
   return res.json();
 }
 
+// העדכון האחרון של כל רשת: השורה החדשה ביותר שלה. בקשה קטנה לכל רשת, במקביל. מחזיר Map chain_id -> loaded_at
+export async function fetchChainUpdates(chainIds) {
+  const latest = await Promise.all(chainIds.map(async (id) => {
+    const params = new URLSearchParams({ select: "loaded_at", chain_id: `eq.${id}`, order: "loaded_at.desc", limit: "1" });
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/chain_items?${params}`, {
+      headers: { apikey: SUPABASE_PUBLISHABLE_KEY },
+    });
+    if (!res.ok) throw new Error(`Supabase ${res.status}`);
+    return [id, (await res.json())[0]?.loaded_at ?? null];
+  }));
+  return new Map(latest.filter(([, at]) => at));
+}
+
 // הסל האוטומטי של העיר: נבנה ב-Supabase מחדש אחרי כל עדכון מחירים. מחזיר רשימת ברקודים לפי הסדר
 export async function fetchAutoBasket(city) {
   const params = new URLSearchParams({ select: "barcode,position", city: `eq.${city}`, order: "position.asc" });

@@ -1,7 +1,7 @@
 // מעבר בין מסכים: "בניית סל", "הסל שלי", "המלצת חלופות" ו"פלט תוצאות"
 import * as basket from "./basket.js?v=12";
-import { fetchAutoBasket, fetchPrices } from "./prices.js?v=14";
-import { compareBasket, formatPrice, parseChainSize, parseSizeText, splitBasket, unitPrice } from "./compare.js?v=14";
+import { fetchAutoBasket, fetchChainUpdates, fetchPrices } from "./prices.js?v=15";
+import { codeIn, compareBasket, formatPrice, parseChainSize, parseSizeText, splitBasket, splitUnavailable, unitPrice } from "./compare.js?v=15";
 import { findSubstitutes } from "./substitutes.js?v=12";
 
 const $ = (id) => document.getElementById(id);
@@ -17,6 +17,9 @@ let autoBarcodes = [];
 // ההשוואה האחרונה: הסל, המחירים מ-Supabase, וההצעות לחלופות ("chain:barcode" -> הצעה)
 let lastItems = [];
 let lastRows = [];
+// מוצרים שהרשת הפסיקה למכור ("chain_id:item_code"), והעדכון האחרון של כל רשת (chain_id -> loaded_at)
+let lastUnavailable = new Set();
+let lastUpdates = new Map();
 let suggestions = new Map();
 
 // החיפוש מתעלם מגרשיים, ממרכאות ומרווחים מיותרים: קוטג' = קוטג
@@ -264,6 +267,16 @@ function statusText(result, counted) {
   return n === 1 ? "חלקי, חסר מוצר אחד" : `חלקי, חסרים ${n} מוצרים`;
 }
 
+// האם המוצר לא זמין ברשת: הרשת הפסיקה למכור אותו, ולא סתם אין אותו
+function isUnavailable(chain, barcode) {
+  return lastUnavailable.has(`${chain.chain_id}:${codeIn(chain, byBarcode.get(barcode))}`);
+}
+
+// "חסר" או "לא זמין" לכל מוצר שאין לו מחיר ברשת
+function missingWord(chain, barcode) {
+  return isUnavailable(chain, barcode) ? "לא זמין" : "חסר ברשת";
+}
+
 function productNames(barcodes) {
   return barcodes.map((b) => byBarcode.get(b).name).join(", ");
 }
@@ -283,7 +296,7 @@ function updatedByChain(rows) {
 function renderResults({ results, notFound }, counted) {
   const list = $("results");
   list.replaceChildren();
-  const updated = updatedByChain(lastRows);
+  const updated = lastUpdates.size ? lastUpdates : updatedByChain(lastRows);
   // החיסכון: ההפרש בין הזולה ליקרה, רק בין רשתות שהסל מלא בהן
   const complete = results.filter((r) => r.complete);
   const saving = complete.length > 1
@@ -326,7 +339,10 @@ function renderResults({ results, notFound }, counted) {
     for (const { barcode, item } of r.substituted) {
       li.append(el("p", { class: "result-missing" }, `⇄ חלופה: ${item.item_name} במקום ${byBarcode.get(barcode).name}`));
     }
-    if (!r.complete) li.append(el("p", { class: "result-missing" }, `חסר ברשת: ${productNames(r.missing)}`));
+    const gone = r.missing.filter((b) => isUnavailable(r.chain, b));
+    const absent = r.missing.filter((b) => !isUnavailable(r.chain, b));
+    if (absent.length) li.append(el("p", { class: "result-missing" }, `חסר ברשת: ${productNames(absent)}`));
+    if (gone.length) li.append(el("p", { class: "result-missing" }, `לא זמין ברשת (הרשת הפסיקה למכור): ${productNames(gone)}`));
     li.append(breakdown(r));
     list.append(li);
   }
@@ -399,7 +415,7 @@ function breakdown(r) {
     const name = sub ? `⇄ ${sub.item_name}` : byBarcode.get(barcode).name;
     li.append(
       el("span", { class: "breakdown-name" }, `${name} × ${qtyText(barcode, qty)}`),
-      el("span", { class: "breakdown-price" }, amount == null ? "חסר ברשת" : formatPrice(amount))
+      el("span", { class: "breakdown-price" }, amount == null ? missingWord(r.chain, barcode) : formatPrice(amount))
     );
     ul.append(li);
   }
@@ -469,8 +485,8 @@ function renderSubs(pairs) {
     head.append(el("h3", { class: "chain-name" }, chain.name));
     head.append(s?.item
       ? el("span", { class: "tag tag-sub" }, "⇄ חלופה")
-      : el("span", { class: "tag tag-missing" }, "חסר ברשת"));
-    li.append(head, el("p", { class: "sub-missing" }, `חסר ברשת: ${label(p)}`));
+      : el("span", { class: "tag tag-missing" }, missingWord(chain, barcode)));
+    li.append(head, el("p", { class: "sub-missing" }, `${missingWord(chain, barcode)}: ${label(p)}`));
 
     if (!s?.item) {
       li.append(el("p", { class: "sub-none" }, s?.error ? "לא הצלחנו לבדוק חלופה כרגע" : "לא נמצאה חלופה מתאימה ברשת"));
@@ -565,7 +581,11 @@ async function compare() {
       const p = byBarcode.get(barcode);
       return [p.barcode, ...Object.values(p.chain_codes || {})];
     }))];
-    [lastRows] = await Promise.all([fetchPrices(codes, chains.map((c) => c.chain_id)), minShow]);
+    const ids = chains.map((c) => c.chain_id);
+    const [rows, updates] = await Promise.all([fetchPrices(codes, ids), fetchChainUpdates(ids), minShow]);
+    // מוצר שהרשת הפסיקה למכור לא נכנס לחישוב, ומוצג "לא זמין"
+    ({ fresh: lastRows, unavailable: lastUnavailable } = splitUnavailable(rows, updates));
+    lastUpdates = updates;
     lastItems = items;
   } catch {
     $("results-loader").hidden = true;

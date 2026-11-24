@@ -3,8 +3,25 @@
 
 // הקוד של המוצר ברשת: בדרך כלל הברקוד, אלא אם הרשת משתמשת בקוד אחר (chain_codes).
 // סניף נוסף של אותה רשת (codes_from) משתמש בקודים של הסניף הראשון שלה
-function codeIn(chain, product) {
+export function codeIn(chain, product) {
   return product.chain_codes?.[chain.codes_from ?? chain.chain_id] ?? product.barcode;
+}
+
+// מוצר שהרשת הפסיקה למכור: השורה שלו לא התעדכנה בעדכון האחרון של הרשת, ונשארה עם מחיר ישן.
+// שורה ישנה ביותר מ-12 שעות מהעדכון האחרון של הרשת נחשבת "לא זמין". העדכון רץ פעם ביום,
+// ולכן כל השורות של אותו עדכון קרובות זו לזו. updates: Map chain_id -> loaded_at האחרון.
+// מחזיר { fresh, unavailable }: השורות לחישוב, וסט של "chain_id:item_code" שלא זמינים
+const UNAVAILABLE_GAP_MS = 12 * 60 * 60 * 1000;
+export function splitUnavailable(rows, updates) {
+  const fresh = [];
+  const unavailable = new Set();
+  for (const r of rows) {
+    const latest = updates.get(r.chain_id);
+    if (latest && r.loaded_at && new Date(latest) - new Date(r.loaded_at) > UNAVAILABLE_GAP_MS) {
+      unavailable.add(`${r.chain_id}:${r.item_code}`);
+    } else fresh.push(r);
+  }
+  return { fresh, unavailable };
 }
 
 // החישוב באגורות שלמות, כדי שלא יהיו שגיאות עיגול
