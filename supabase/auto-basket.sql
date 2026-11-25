@@ -87,3 +87,7 @@ drop trigger if exists auto_basket_after_prices on public.chain_items;
 create trigger auto_basket_after_prices
 after insert or update or delete on public.chain_items
 for each statement execute function public.auto_basket_after_prices();
+
+-- אינדקס לחיפוש העדכון האחרון של כל סניף (max(loaded_at) בבנייה). בלעדיו כל בנייה לקחה כ-3 שניות,
+-- וחלקי העדכון שעומדים בתור על הנעילה חרגו מזמן ההרצה (57014). הוחל ב-25.11.2026, migration chain_items_chain_loaded_idx.
+create index if not exists chain_items_chain_loaded_idx on public.chain_items (chain_id, loaded_at desc);
