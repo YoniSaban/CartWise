@@ -3,6 +3,7 @@ import * as basket from "./basket.js?v=12";
 import { fetchAutoBasket, fetchChainUpdates, fetchPrices } from "./prices.js?v=15";
 import { codeIn, compareBasket, formatPrice, parseChainSize, parseSizeText, splitBasket, splitUnavailable, unitPrice } from "./compare.js?v=15";
 import { findSubstitutes } from "./substitutes.js?v=12";
+import * as auth from "./auth.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 
@@ -686,7 +687,155 @@ function setupCity() {
   });
 }
 
+// ---- התחברות (רק לתורמים. ההשוואה פתוחה לכולם) ----
+
+// פעולות שדורשות התחברות. אחרי החזרה מ-Google הפעולה שהתחילה ממשיכה
+const ACTIONS = {
+  // הטופס ייבנה במיילסטון 11
+  report: () => showInfo("מצאתי זול יותר", "טופס הדיווח יגיע בקרוב. תודה שאתם עוזרים לכולם לחסוך!"),
+};
+
+let dialogOpener = null;
+
+function openDialog(id) {
+  dialogOpener = document.activeElement;
+  $(id).showModal();
+}
+
+function closeDialog(id) {
+  $(id).close();
+}
+
+function showInfo(title, text) {
+  $("info-title").textContent = title;
+  $("info-text").textContent = text;
+  openDialog("info-dialog");
+}
+
+// מפעיל פעולה של תורם: מחובר, מיד. לא מחובר, חלון הכניסה
+let pendingAction = null;
+function requireLogin(action) {
+  if (auth.getUser()) {
+    ACTIONS[action]();
+    return;
+  }
+  pendingAction = action;
+  openDialog("login-dialog");
+}
+
+function renderProfile(user) {
+  $("profile").hidden = !user;
+  if (!user) {
+    closeProfileMenu(false);
+    return;
+  }
+  $("profile-name").textContent = user.name;
+  $("profile-email").textContent = user.email;
+  $("profile-initial").textContent = (user.name || "?").trim().charAt(0);
+  const img = $("profile-img");
+  if (user.avatar) {
+    img.src = user.avatar;
+    img.hidden = false;
+    $("profile-initial").hidden = true;
+  } else {
+    img.hidden = true;
+    $("profile-initial").hidden = false;
+  }
+  $("profile-btn").setAttribute("aria-label", `תפריט החשבון של ${user.name}`);
+}
+
+function openProfileMenu() {
+  $("profile-menu").hidden = false;
+  $("profile-btn").setAttribute("aria-expanded", "true");
+  $("profile-menu").querySelector(".profile-item").focus();
+}
+
+function closeProfileMenu(focus = true) {
+  if ($("profile-menu").hidden) return;
+  $("profile-menu").hidden = true;
+  $("profile-btn").setAttribute("aria-expanded", "false");
+  $("profile-status").textContent = "";
+  resetDelete();
+  if (focus) $("profile-btn").focus();
+}
+
+let deleteTimer = null;
+function resetDelete() {
+  clearTimeout(deleteTimer);
+  deleteTimer = null;
+  $("btn-delete-account").textContent = "מחיקת חשבון";
+  $("btn-delete-account").classList.remove("confirming");
+}
+
+async function handleDeleteAccount() {
+  const btn = $("btn-delete-account");
+  // אישור בתוך הדף (לחיצה שנייה), כמו "נקה סל"
+  if (!deleteTimer) {
+    btn.textContent = "כל המידע שלך יימחק. לחץ שוב לאישור";
+    btn.classList.add("confirming");
+    announce("כל המידע שלך יימחק, ואי אפשר לבטל. לחץ שוב כדי למחוק את החשבון");
+    deleteTimer = setTimeout(resetDelete, 6000);
+    return;
+  }
+  resetDelete();
+  btn.disabled = true;
+  $("profile-status").textContent = "מוחק...";
+  try {
+    await auth.deleteAccount();
+    announce("החשבון נמחק");
+    showInfo("החשבון נמחק", "החשבון וכל המידע שלו נמחקו. אפשר להמשיך להשוות סלים בלי התחברות.");
+  } catch {
+    $("profile-status").textContent = "המחיקה לא הצליחה. נסו שוב.";
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function setupAuth() {
+  auth.onChange(renderProfile);
+
+  $("btn-report").addEventListener("click", () => requireLogin("report"));
+  $("btn-google").addEventListener("click", () => {
+    $("btn-google").disabled = true;
+    auth.signIn(pendingAction);
+  });
+  $("btn-login-close").addEventListener("click", () => closeDialog("login-dialog"));
+  $("btn-info-close").addEventListener("click", () => closeDialog("info-dialog"));
+  ["login-dialog", "info-dialog"].forEach((id) => {
+    $(id).addEventListener("close", () => {
+      if (id === "login-dialog") pendingAction = null;
+      if (dialogOpener && document.contains(dialogOpener) && !dialogOpener.closest("[hidden]")) dialogOpener.focus();
+      dialogOpener = null;
+    });
+  });
+
+  $("profile-btn").addEventListener("click", () => {
+    if ($("profile-menu").hidden) openProfileMenu();
+    else closeProfileMenu();
+  });
+  $("profile").addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeProfileMenu();
+  });
+  document.addEventListener("click", (e) => {
+    if (!$("profile").contains(e.target)) closeProfileMenu(false);
+  });
+  $("btn-signout").addEventListener("click", async () => {
+    await auth.signOut();
+    announce("התנתקת");
+    $("build-title").focus({ preventScroll: true });
+  });
+  $("btn-delete-account").addEventListener("click", handleDeleteAccount);
+
+  const { error, pending } = await auth.init();
+  renderProfile(auth.getUser());
+  if (error) showInfo("הכניסה לא הצליחה", "לא הצלחנו להתחבר עם Google. נסו שוב.");
+  else if (pending && ACTIONS[pending] && auth.getUser()) ACTIONS[pending]();
+  else if (auth.getUser() && pending === null) announce(`מחובר בתור ${auth.getUser().name}`);
+}
+
 async function init() {
+  // ההתחברות לא מעכבת את טעינת האתר. אם היא נכשלת, האתר עובד כרגיל בלי חשבון
+  setupAuth().catch(() => {});
   try {
     [products, allChains] = await Promise.all([
       loadJson("data/products.json?v=60"),
