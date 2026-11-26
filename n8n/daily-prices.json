@@ -2942,6 +2942,118 @@
           "name": "Gmail SMTP"
         }
       }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "5 10 * * *"
+            }
+          ]
+        }
+      },
+      "id": "community1",
+      "name": "קהילה: כל יום ב-10:05",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        4100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/price_reports?select=id,barcode,chain_id,price,official_price,suspicious,created_at&status=eq.pending&order=created_at.asc",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {}
+      },
+      "id": "community2",
+      "name": "קהילה: דיווחים ממתינים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        4100
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3
+    },
+    {
+      "parameters": {
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/product_requests?select=id,name,created_at&status=eq.pending&order=created_at.asc",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {}
+      },
+      "id": "community3",
+      "name": "קהילה: בקשות ממתינות",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        4100
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3
+    },
+    {
+      "parameters": {
+        "jsCode": "// 10:05: דיווחי \"מצאתי זול יותר\" ובקשות מוצרים שממתינים לאישור. אין ממתינים: לא נשלח מייל\n// הנתונים מגיעים משני צומתי ה-HTTP (עם ה-Credential של Supabase). שמות המוצרים והרשתות מהאתר החי\nconst BASE = 'https://yonisaban.github.io/CartWise/';\nconst EDITOR = 'https://supabase.com/dashboard/project/myfvbmcmpdxtxubdraaq/editor';\nconst reports = $('קהילה: דיווחים ממתינים').all().map((i) => i.json).filter((r) => r.id);\nconst requests = $('קהילה: בקשות ממתינות').all().map((i) => i.json).filter((r) => r.id);\nif (!reports.length && !requests.length) return [];\nconst get = (url) => this.helpers.httpRequest({ url, json: true });\nconst [products, chains] = await Promise.all([\n  get(BASE + 'data/products.json?t=' + Date.now()),\n  get(BASE + 'data/chains.json?t=' + Date.now()),\n]);\nconst product = new Map(products.map((p) => [p.barcode, p]));\nconst chain = new Map(chains.map((c) => [c.chain_id, c]));\nconst esc = (s) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));\nconst nis = (v) => (v == null ? '' : '₪ ' + Number(v).toFixed(2));\nconst heTime = (d) => new Date(d).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });\nconst table = 'border=\"1\" cellpadding=\"6\" style=\"border-collapse:collapse;direction:rtl\"';\nlet html = '<div dir=\"rtl\" style=\"font-family:Arial,sans-serif\">';\nif (reports.length) {\n  const rows = reports.map((r, i) => {\n    const p = product.get(r.barcode);\n    const c = chain.get(r.chain_id);\n    const pct = r.official_price ? Math.round((1 - r.price / r.official_price) * 100) + '%' : '';\n    return `<tr${r.suspicious ? ' style=\"background:#FEF3F2\"' : ''}><td>${i + 1}</td><td>${r.id}</td><td>${esc(p ? p.name : r.barcode)}</td><td>${esc(c ? c.name + ', ' + c.city : r.chain_id)}</td><td>${nis(r.price)}</td><td>${nis(r.official_price)}</td><td>${pct}</td><td>${r.suspicious ? 'חשוד: יותר מ-50% הנחה' : ''}</td><td>${heTime(r.created_at)}</td></tr>`;\n  }).join('');\n  html += `<h3>דיווחי \"מצאתי זול יותר\" (${reports.length})</h3>\n<table ${table}><tr><th>מס'</th><th>id</th><th>מוצר</th><th>רשת</th><th>מחיר מדווח</th><th>מחיר רשמי</th><th>הנחה</th><th>הערה</th><th>נשלח</th></tr>${rows}</table>`;\n}\nif (requests.length) {\n  const rows = requests.map((r, i) => `<tr><td>${i + 1}</td><td>${r.id}</td><td>${esc(r.name)}</td><td>${heTime(r.created_at)}</td></tr>`).join('');\n  html += `<h3>בקשות מוצרים (${requests.length})</h3>\n<table ${table}><tr><th>מס'</th><th>id</th><th>מוצר מבוקש</th><th>נשלח</th></tr>${rows}</table>`;\n}\nhtml += `<p>לאישור או דחייה: בעורך הטבלאות של Supabase, בטבלה price_reports או product_requests, משנים את status ל-approved או rejected (ואפשר לכתוב סיבה ב-reject_reason). <a href=\"${EDITOR}\">פתיחת עורך הטבלאות</a></p></div>`;\nconst total = reports.length + requests.length;\nreturn [{ json: { subject: `סל חכם: ${total} ממתינים לאישור (${reports.length} דיווחים, ${requests.length} בקשות)`, html } }];\n"
+      },
+      "id": "community4",
+      "name": "קהילה: מייל ממתינים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        4100
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "fromEmail": "סל חכם <__ALERT_FROM__>",
+        "toEmail": "__ALERT_TO__",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "html",
+        "html": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "community5",
+      "name": "קהילה: שליחת מייל ממתינים",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1200,
+        4100
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "__SMTP_ID__",
+          "name": "Gmail SMTP"
+        }
+      }
     }
   ],
   "connections": {
@@ -4960,6 +5072,50 @@
         [
           {
             "node": "מייל: שליחת טבלה",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קהילה: כל יום ב-10:05": {
+      "main": [
+        [
+          {
+            "node": "קהילה: דיווחים ממתינים",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קהילה: דיווחים ממתינים": {
+      "main": [
+        [
+          {
+            "node": "קהילה: בקשות ממתינות",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קהילה: בקשות ממתינות": {
+      "main": [
+        [
+          {
+            "node": "קהילה: מייל ממתינים",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קהילה: מייל ממתינים": {
+      "main": [
+        [
+          {
+            "node": "קהילה: שליחת מייל ממתינים",
             "type": "main",
             "index": 0
           }

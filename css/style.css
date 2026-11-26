@@ -711,3 +711,81 @@ button[aria-disabled="true"] { cursor: default; }
 .privacy p, .privacy li { font-size: 16px; }
 .privacy ul { margin: 0 0 8px; padding-inline-start: 20px; }
 .btn-link { display: flex; align-items: center; justify-content: center; text-decoration: none; margin-top: 24px; }
+
+/* מיילסטון 11: דיווחים, בקשות והצבעה */
+.breakdown-report {
+  flex-basis: 100%;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--green);
+}
+.link-btn {
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--blue);
+  font-weight: 500;
+  text-decoration: underline;
+}
+.request-hint { margin: 8px 0 0; }
+.request-hint[hidden] { display: none; }
+.requests-link { margin: 16px 0 0; text-align: center; }
+
+.dialog-tall { max-height: calc(100vh - 32px); overflow-y: auto; }
+.form { display: flex; flex-direction: column; gap: 6px; }
+.form label { font-weight: 500; margin-top: 6px; }
+.form select, .form input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--text);
+  background: var(--white);
+  border: 1.5px solid var(--field-border);
+  border-radius: var(--radius);
+}
+.form select:focus-visible, .form input:focus-visible { outline: 3px solid var(--blue); outline-offset: 1px; }
+.form .btn-primary { margin-top: 10px; }
+.dialog .form-hint { margin: 0; font-size: 13px; color: var(--text-muted); }
+.dialog .form-status { margin: 4px 0 0; font-weight: 500; }
+.dialog .form-status:empty { display: none; }
+.form-status.ok { color: var(--green); }
+.form-status.error { color: var(--error); }
+
+.similar { padding: 10px 12px; background: var(--warm); border-radius: var(--radius); }
+.similar[hidden] { display: none; }
+.dialog .similar p { margin: 0 0 6px; font-size: 14px; }
+
+.requests-subtitle { margin: 20px 0 8px; font-size: 16px; }
+.votes-left { font-weight: 400; font-size: 13px; color: var(--text-muted); }
+.requests-list, .mine-list { list-style: none; margin: 0; padding: 0; }
+.request-item, .mine-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.request-info { display: flex; flex-direction: column; min-width: 0; }
+.request-name, .mine-name { font-weight: 500; overflow-wrap: anywhere; }
+.request-votes, .mine-state { font-size: 13px; color: var(--text-muted); }
+.mine-state.state-rejected { color: var(--error); font-weight: 500; }
+.mine-reason { font-size: 13px; color: var(--text); }
+.mine-heading { margin-top: 12px; font-weight: 700; }
+.mine-empty { padding: 8px 0; color: var(--text-muted); }
+.btn-vote {
+  flex-shrink: 0;
+  min-width: 88px;
+  min-height: 40px;
+  padding: 0 12px;
+  font-weight: 500;
+  color: var(--blue);
+  background: var(--white);
+  border: 1.5px solid var(--blue);
+  border-radius: var(--radius);
+}
+.btn-vote.voted { color: var(--white); background: var(--green); border-color: var(--green); }
+.dialog > .btn-wide { margin-top: 16px; }
+.breakdown-list li:has(.breakdown-report) { flex-wrap: wrap; row-gap: 2px; }

@@ -135,8 +135,11 @@ n8n על המחשב של יוני ──פעם ביום──▶ 6 רשתות �
 | 3 | `auto_basket` | קריאה בלבד | נכתבת רק מהפונקציה במסד הנתונים |
 | 4 | `auto_basket_candidates`, `auto_basket_branches` | אין גישה | מתעדכנות ידנית ב-SQL |
 | 5 | `profiles` | אין גישה. משתמש מחובר: קריאה של השורה שלו בלבד | נכתבת רק מהטריגר |
+| 6 | `price_reports` | קריאה של מאושרים ב-3 הימים מהאישור, בלי `user_id`. משתמש מחובר: שולח רק דרך `submit_price_report()` | יוני משנה `status` בעורך הטבלאות. n8n קורא ממתינים |
+| 7 | `product_requests` | משתמש מחובר: קריאה של שלו, שליחה דרך `submit_product_request()`. מאושרות עם קולות: `list_requests()` | כמו `price_reports` |
+| 8 | `request_votes` | משתמש מחובר: קריאה, הוספה ומחיקה של שלו, רק על בקשה מאושרת. טריגר: עד 5 קולות פעילים | |
 
-- הדפדפן לא כותב לאף טבלה. הסל שלו נשאר אצלו. (במיילסטונים 11 ו-12 משתמש מחובר יכתוב את הדיווחים, הקולות והחיסכון שלו.)
+- משתמש אנונימי לא כותב לאף טבלה. הסל נשאר בדפדפן. מ-מיילסטון 11 משתמש מחובר כותב, עם הטוקן שלו, דיווחים, בקשות וקולות (`js/community.js`, `supabase/community.sql`). אישור מנהל: `status` בעורך הטבלאות של Supabase, ומייל יומי מ-n8n ב-10:05 עם מה שממתין.
 
 ## 4. שכבת ה-AI
 
@@ -229,6 +232,7 @@ css/
 js/
   config.js             כתובת Supabase והמפתח הציבורי
   auth.js               התחברות עם Google (Supabase Auth)
+  community.js          דיווחים, בקשות והצבעה
   app.js                מעבר בין מסכים
   basket.js             הסל וה-localStorage
   prices.js             קריאה מ-Supabase
@@ -246,6 +250,7 @@ supabase/
   auto-basket.sql       טבלאות הסל האוטומטי והטריגר
   auto-basket-candidates.sql  המוצרים והסניפים של הסל האוטומטי
   auth-profiles.sql     טבלת profiles, הטריגר ומחיקת חשבון
+  community.sql         דיווחים, בקשות, קולות, והכללים שלהם
 api/
   substitutes.js        הפונקציה ב-Vercel
 n8n/

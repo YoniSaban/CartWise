@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=32">
+  <link rel="stylesheet" href="css/style.css?v=33">
 </head>
 <body>
   <header class="topbar">
@@ -24,6 +24,8 @@
         <div id="profile-menu" class="profile-menu" hidden>
           <p id="profile-name" class="profile-name"></p>
           <p id="profile-email" class="profile-email" dir="ltr"></p>
+          <button id="btn-my-reports" type="button" class="profile-item">הדיווחים שלי</button>
+          <button id="btn-my-requests" type="button" class="profile-item">הבקשות והקולות שלי</button>
           <a href="privacy.html" class="profile-item">מדיניות פרטיות</a>
           <button id="btn-signout" type="button" class="profile-item">התנתק</button>
           <button id="btn-delete-account" type="button" class="profile-item profile-danger">מחיקת חשבון</button>
@@ -67,7 +69,10 @@
 
       <h2 id="products-title">מוצרים</h2>
       <p id="products-status" class="note" aria-live="polite"></p>
+      <p id="request-hint" class="request-hint" hidden>לא מצאתם? <button id="btn-request-missing" type="button" class="link-btn">בקשו שנוסיף אותו</button></p>
       <ul id="products" class="list products" aria-labelledby="products-title"></ul>
+
+      <p class="requests-link"><button id="btn-requests" type="button" class="link-btn">בקשות מוצרים: חסר לכם מוצר? בקשו והצביעו</button></p>
 
       <div class="action-bar" role="group" aria-label="פעולות על הסל">
         <button id="btn-to-basket" type="button" class="btn-primary btn-to-basket">הסל שלי (0)</button>
@@ -165,6 +170,44 @@
     <button id="btn-login-close" type="button" class="btn-secondary btn-wide">ביטול</button>
   </dialog>
 
+  <dialog id="report-dialog" class="dialog" aria-labelledby="report-title">
+    <h2 id="report-title">מצאתי זול יותר</h2>
+    <form id="report-form" class="form" novalidate>
+      <label for="report-product">מוצר</label>
+      <select id="report-product" required></select>
+      <label for="report-chain">רשת</label>
+      <select id="report-chain" required></select>
+      <p id="report-official" class="form-hint" aria-live="polite"></p>
+      <label for="report-price" id="report-price-label">המחיר שמצאתם (₪)</label>
+      <input id="report-price" type="text" inputmode="decimal" autocomplete="off" required>
+      <p id="report-status" class="form-status" aria-live="polite"></p>
+      <button id="btn-report-send" type="submit" class="btn-primary">שלחו דיווח</button>
+      <button id="btn-report-close" type="button" class="btn-secondary btn-wide">סגירה</button>
+    </form>
+  </dialog>
+
+  <dialog id="requests-dialog" class="dialog dialog-tall" aria-labelledby="requests-title">
+    <h2 id="requests-title">בקשות מוצרים</h2>
+    <form id="request-form" class="form" novalidate>
+      <label for="request-name">איזה מוצר להוסיף לסל חכם?</label>
+      <input id="request-name" type="text" maxlength="60" autocomplete="off" placeholder="למשל: חלב שקדים">
+      <div id="request-similar" class="similar" hidden></div>
+      <p id="request-status" class="form-status" aria-live="polite"></p>
+      <button id="btn-request-send" type="submit" class="btn-primary">שלחו בקשה</button>
+    </form>
+    <h3 class="requests-subtitle">בקשות שאושרו <span id="votes-left" class="votes-left"></span></h3>
+    <p id="requests-list-status" class="note" aria-live="polite"></p>
+    <ul id="requests-list" class="requests-list"></ul>
+    <button id="btn-requests-close" type="button" class="btn-secondary btn-wide">סגירה</button>
+  </dialog>
+
+  <dialog id="mine-dialog" class="dialog dialog-tall" aria-labelledby="mine-title">
+    <h2 id="mine-title"></h2>
+    <p id="mine-status" class="note" aria-live="polite"></p>
+    <ul id="mine-list" class="mine-list"></ul>
+    <button id="btn-mine-close" type="button" class="btn-secondary btn-wide">סגירה</button>
+  </dialog>
+
   <dialog id="info-dialog" class="dialog" aria-labelledby="info-title">
     <h2 id="info-title"></h2>
     <p id="info-text"></p>
@@ -173,6 +216,6 @@
 
   <p id="announcer" class="visually-hidden" aria-live="polite"></p>
 
-  <script type="module" src="js/app.js?v=78"></script>
+  <script type="module" src="js/app.js?v=79"></script>
 </body>
 </html>

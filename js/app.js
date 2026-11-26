@@ -4,6 +4,7 @@ import { fetchAutoBasket, fetchChainUpdates, fetchPrices } from "./prices.js?v=1
 import { codeIn, compareBasket, formatPrice, parseChainSize, parseSizeText, splitBasket, splitUnavailable, unitPrice } from "./compare.js?v=15";
 import { findSubstitutes } from "./substitutes.js?v=12";
 import * as auth from "./auth.js?v=1";
+import * as community from "./community.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 
@@ -22,6 +23,8 @@ let lastRows = [];
 let lastUnavailable = new Set();
 let lastUpdates = new Map();
 let suggestions = new Map();
+// דיווחי "מצאתי זול יותר" מאושרים ובתוקף: "chain_id:barcode" -> מחיר בשקלים
+let lastReports = new Map();
 
 // החיפוש מתעלם מגרשיים, ממרכאות ומרווחים מיותרים: קוטג' = קוטג
 function normalize(text) {
@@ -104,6 +107,7 @@ function renderProducts() {
   }
 
   $("products-status").textContent = shown.length ? "" : "לא נמצאו מוצרים";
+  $("request-hint").hidden = Boolean(shown.length) || !query;
 }
 
 // כפתור קטגוריה מסנן את הרשימה. לחיצה נוספת על אותה קטגוריה מבטלת את הסינון.
@@ -407,6 +411,23 @@ function renderSplit(split) {
 }
 
 // פירוט המחירים ברשת: שורה לכל מוצר, סגור עד לחיצה
+// מחיר מדווח ומאושר, רק כשהוא עדיין נמוך מהמחיר הרשמי. לא משנה את סכום הסל
+function officialPrice(chain, product) {
+  const code = codeIn(chain, product);
+  const row = lastRows.find((x) => x.chain_id === chain.chain_id && x.item_code === code);
+  const value = product.unit === "kg" ? row?.price_per_kg : row?.price;
+  return value == null ? null : Number(value);
+}
+
+function reportedPrice(chain, barcode) {
+  const price = lastReports.get(`${chain.chain_id}:${barcode}`);
+  const product = byBarcode.get(barcode);
+  const official = officialPrice(chain, product);
+  if (price == null || official == null || price >= official) return "";
+  const per = product.unit === "kg" ? ' לק"ג' : "";
+  return `דווח: ${formatPrice(Math.round(price * 100))}${per} · מאושר ע״י מנהל`;
+}
+
 function breakdown(r) {
   const details = el("details", { class: "breakdown" });
   details.append(el("summary", {}, "פירוט מחירים"));
@@ -418,6 +439,8 @@ function breakdown(r) {
       el("span", { class: "breakdown-name" }, `${name} × ${qtyText(barcode, qty)}`),
       el("span", { class: "breakdown-price" }, amount == null ? missingWord(r.chain, barcode) : formatPrice(amount))
     );
+    const reported = !sub && amount != null && reportedPrice(r.chain, barcode);
+    if (reported) li.append(el("span", { class: "breakdown-report" }, reported));
     ul.append(li);
   }
   details.append(ul);
@@ -583,7 +606,14 @@ async function compare() {
       return [p.barcode, ...Object.values(p.chain_codes || {})];
     }))];
     const ids = chains.map((c) => c.chain_id);
-    const [rows, updates] = await Promise.all([fetchPrices(codes, ids), fetchChainUpdates(ids), minShow]);
+    // דיווחים מאושרים: אם נכשל, ההשוואה ממשיכה בלעדיהם
+    const [rows, updates, reports] = await Promise.all([
+      fetchPrices(codes, ids),
+      fetchChainUpdates(ids),
+      community.fetchApprovedReports(ids).catch(() => new Map()),
+      minShow,
+    ]);
+    lastReports = reports;
     // מוצר שהרשת הפסיקה למכור לא נכנס לחישוב, ומוצג "לא זמין"
     ({ fresh: lastRows, unavailable: lastUnavailable } = splitUnavailable(rows, updates));
     lastUpdates = updates;
@@ -691,9 +721,10 @@ function setupCity() {
 
 // פעולות שדורשות התחברות. אחרי החזרה מ-Google הפעולה שהתחילה ממשיכה
 const ACTIONS = {
-  // הטופס ייבנה במיילסטון 11
-  report: () => showInfo("מצאתי זול יותר", "טופס הדיווח יגיע בקרוב. תודה שאתם עוזרים לכולם לחסוך!"),
+  report: () => openReport(),
+  requests: () => openRequests(sessionStorage.getItem(DRAFT_KEY) || ""),
 };
+const DRAFT_KEY = "cartwise-request-draft";
 
 let dialogOpener = null;
 
@@ -791,6 +822,381 @@ async function handleDeleteAccount() {
   }
 }
 
+// ---- קהילה: "מצאתי זול יותר", בקשות מוצרים והצבעה ----
+
+const STATUS_TEXT = { pending: "ממתין לאישור", approved: "מאושר", rejected: "לא אושר", added: "נוסף לקטלוג 🎉", expired: "פג תוקף" };
+const REPORT_DAYS = 3;
+
+function chainById(id) {
+  return allChains.find((c) => c.chain_id === id);
+}
+
+function shekels(value) {
+  return formatPrice(Math.round(Number(value) * 100));
+}
+
+function setStatus(id, text, kind = "") {
+  $(id).textContent = text;
+  $(id).className = `form-status ${kind}`.trim();
+}
+
+// "12,90" או "12.9" -> 12.9. לא תקין: null
+function parsePrice(text) {
+  const clean = text.trim().replace(/[₪\s]/g, "").replace(",", ".");
+  if (!/^\d{1,4}(\.\d{1,2})?$/.test(clean)) return null;
+  const value = Number(clean);
+  return value > 0 ? value : null;
+}
+
+// --- טופס הדיווח ---
+
+function reportProduct() {
+  return byBarcode.get($("report-product").value);
+}
+
+function reportChain() {
+  return chains.find((c) => c.chain_id === $("report-chain").value);
+}
+
+let officialRequest = 0;
+async function updateOfficial() {
+  const product = reportProduct();
+  const chain = reportChain();
+  if (!product || !chain) return;
+  $("report-price-label").textContent = product.unit === "kg" ? 'המחיר שמצאתם לק"ג (₪)' : "המחיר שמצאתם (₪)";
+  $("report-official").textContent = "בודקים את המחיר הרשמי...";
+  const ticket = ++officialRequest;
+  try {
+    const rows = await fetchPrices([codeIn(chain, product)], [chain.chain_id]);
+    if (ticket !== officialRequest) return;
+    const row = rows[0];
+    const value = product.unit === "kg" ? row?.price_per_kg : row?.price;
+    $("report-official").textContent = value == null
+      ? "אין לנו מחיר רשמי למוצר הזה ברשת הזו, ולכן אי אפשר לדווח עליו."
+      : `המחיר הרשמי כאן: ${shekels(value)}${product.unit === "kg" ? ' לק"ג' : ""}`;
+  } catch {
+    if (ticket === officialRequest) $("report-official").textContent = "";
+  }
+}
+
+function openReport() {
+  const select = $("report-product");
+  select.replaceChildren();
+  const inBasket = basket.items().map((i) => i.barcode).filter((b) => byBarcode.has(b));
+  const group = (title, list) => {
+    if (!list.length) return;
+    const g = el("optgroup", { label: title });
+    list.forEach((p) => g.append(el("option", { value: p.barcode }, label(p))));
+    select.append(g);
+  };
+  const byName = (a, b) => a.name.localeCompare(b.name, "he");
+  group("מהסל שלי", inBasket.map((b) => byBarcode.get(b)).sort(byName));
+  group("כל המוצרים", products.filter((p) => !inBasket.includes(p.barcode)).sort(byName));
+
+  $("report-chain").replaceChildren(...chains.map((c) => el("option", { value: c.chain_id }, `${c.name}, ${c.store_name}`)));
+  $("report-price").value = "";
+  setStatus("report-status", "");
+  updateOfficial();
+  openDialog("report-dialog");
+}
+
+async function sendReport(event) {
+  event.preventDefault();
+  const product = reportProduct();
+  const chain = reportChain();
+  const price = parsePrice($("report-price").value);
+  if (!product || !chain) return;
+  if (price == null) {
+    setStatus("report-status", "כתבו מחיר במספרים, למשל 12.90", "error");
+    $("report-price").focus();
+    return;
+  }
+  const btn = $("btn-report-send");
+  btn.disabled = true;
+  setStatus("report-status", "שולחים...");
+  try {
+    const result = await community.submitReport({
+      barcode: product.barcode,
+      chainId: chain.chain_id,
+      itemCode: codeIn(chain, product),
+      perKg: product.unit === "kg",
+      price,
+    });
+    const messages = {
+      ok: ["תודה! הדיווח יופיע באתר אחרי אישור.", "ok"],
+      updated: ["עדכנו את הדיווח שלכם מהיום על המוצר הזה. הוא יופיע אחרי אישור.", "ok"],
+      limit: ["הגעתם ל-5 דיווחים היום. אפשר לדווח שוב מחר.", "error"],
+      not_cheaper: ["המחיר הזה לא נמוך מהמחיר הרשמי, אז אין מה לדווח.", "error"],
+      no_price: ["אין לנו מחיר רשמי למוצר הזה ברשת הזו, ולכן אי אפשר לדווח עליו.", "error"],
+    };
+    const [text, kind] = messages[result] || ["השליחה לא הצליחה. נסו שוב.", "error"];
+    setStatus("report-status", text, kind);
+    announce(text);
+    if (kind === "ok") $("report-price").value = "";
+  } catch (err) {
+    if (err.signedOut) {
+      closeDialog("report-dialog");
+      requireLogin("report");
+    } else {
+      setStatus("report-status", "השליחה לא הצליחה. בדקו את החיבור ונסו שוב.", "error");
+    }
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// --- בקשות מוצרים והצבעה ---
+
+let requestList = [];
+
+function votesText(n) {
+  return Number(n) === 1 ? "קול אחד" : `${n} קולות`;
+}
+
+function votesLeftText(used) {
+  const left = Math.max(0, 5 - used);
+  return left === 1 ? "(נשאר לכם קול אחד)" : `(נשארו לכם ${left} קולות)`;
+}
+
+function voteButton(r) {
+  return el("button", {
+    type: "button",
+    class: r.my_vote ? "btn-vote voted" : "btn-vote",
+    "data-request": r.id,
+    "aria-pressed": String(r.my_vote),
+    "aria-label": r.my_vote ? `ביטול הקול על ${r.name}` : `הצבעה על ${r.name}`,
+  }, r.my_vote ? "✓ הצבעתי" : "הצבעה");
+}
+
+function requestItem(r) {
+  const li = el("li", { class: "request-item" });
+  const info = el("div", { class: "request-info" });
+  info.append(el("span", { class: "request-name" }, r.name), el("span", { class: "request-votes" }, votesText(r.votes)));
+  li.append(info, voteButton(r));
+  return li;
+}
+
+function renderRequests() {
+  $("requests-list").replaceChildren(...requestList.map(requestItem));
+  renderSimilar();
+}
+
+async function loadRequests() {
+  $("requests-list-status").textContent = "טוענים...";
+  try {
+    const [list, used] = await Promise.all([
+      community.listRequests(),
+      auth.getUser() ? community.myActiveVotes() : Promise.resolve(null),
+    ]);
+    requestList = list;
+    $("votes-left").textContent = used == null ? "" : votesLeftText(used);
+    $("requests-list-status").textContent = list.length ? "" : "עוד אין בקשות שאושרו. היו הראשונים לבקש!";
+    renderRequests();
+  } catch {
+    $("requests-list-status").textContent = "לא הצלחנו לטעון את הבקשות. נסו שוב.";
+  }
+}
+
+// בקשה דומה שכבר אושרה, או מוצר שכבר בקטלוג: מציעים אותם לפני בקשה חדשה
+function renderSimilar() {
+  const box = $("request-similar");
+  box.replaceChildren();
+  const query = normalize($("request-name").value);
+  if (query.length < 2) {
+    box.hidden = true;
+    return;
+  }
+  const words = query.split(" ").filter((w) => w.length >= 3);
+  const similar = requestList.filter((r) => {
+    const name = normalize(r.name);
+    return name.includes(query) || query.includes(name) || words.some((w) => name.includes(w));
+  }).slice(0, 3);
+  const inCatalog = products.filter((p) => matches(p, query)).slice(0, 2);
+  if (!similar.length && !inCatalog.length) {
+    box.hidden = true;
+    return;
+  }
+  for (const p of inCatalog) box.append(el("p", {}, `כבר בקטלוג: ${label(p)}`));
+  if (similar.length) {
+    box.append(el("p", {}, "אולי התכוונתם לבקשה שכבר קיימת? אפשר להצביע עליה:"));
+    box.append(el("ul", { class: "requests-list" }));
+    box.lastChild.append(...similar.map(requestItem));
+  }
+  box.hidden = false;
+}
+
+function openRequests(prefill = "") {
+  sessionStorage.removeItem(DRAFT_KEY);
+  $("request-name").value = prefill;
+  setStatus("request-status", "");
+  $("votes-left").textContent = "";
+  requestList = [];
+  renderRequests();
+  openDialog("requests-dialog");
+  loadRequests();
+}
+
+// לא מחובר: שומרים את מה שהוקלד, סוגרים את החלון, וממשיכים אחרי הכניסה
+function loginForRequests() {
+  sessionStorage.setItem(DRAFT_KEY, $("request-name").value);
+  closeDialog("requests-dialog");
+  requireLogin("requests");
+}
+
+async function sendRequest(event) {
+  event.preventDefault();
+  if (!auth.getUser()) {
+    loginForRequests();
+    return;
+  }
+  const name = $("request-name").value.trim();
+  if (name.length < 2) {
+    setStatus("request-status", "כתבו שם של מוצר, לפחות 2 אותיות.", "error");
+    $("request-name").focus();
+    return;
+  }
+  const btn = $("btn-request-send");
+  btn.disabled = true;
+  setStatus("request-status", "שולחים...");
+  try {
+    const result = await community.submitRequest(name);
+    const messages = {
+      ok: ["תודה! הבקשה תופיע ברשימה אחרי אישור, ואחרים יוכלו להצביע עליה. הקול שלכם כבר עליה.", "ok"],
+      ok_no_vote: ["תודה! הבקשה תופיע אחרי אישור. לא נשאר לכם קול פנוי להצביע עליה.", "ok"],
+      limit: ["הגעתם ל-5 בקשות היום. אפשר לבקש שוב מחר.", "error"],
+      invalid: ["כתבו שם של מוצר, בין 2 ל-60 תווים.", "error"],
+    };
+    const [text, kind] = messages[result] || ["השליחה לא הצליחה. נסו שוב.", "error"];
+    setStatus("request-status", text, kind);
+    announce(text);
+    if (kind === "ok") {
+      $("request-name").value = "";
+      loadRequests();
+    }
+  } catch (err) {
+    if (err.signedOut) loginForRequests();
+    else setStatus("request-status", "השליחה לא הצליחה. בדקו את החיבור ונסו שוב.", "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function toggleVote(btn, statusId, reload) {
+  if (!auth.getUser()) {
+    loginForRequests();
+    return;
+  }
+  const id = Number(btn.dataset.request);
+  const voted = btn.getAttribute("aria-pressed") === "true";
+  btn.disabled = true;
+  try {
+    if (voted) await community.unvote(id);
+    else await community.vote(id);
+    announce(voted ? "הקול בוטל" : "הצבעתם. תודה!");
+    await reload();
+  } catch (err) {
+    const text = err.voteLimit
+      ? "נגמרו 5 הקולות שלכם. בטלו קול על בקשה אחרת כדי להצביע."
+      : "לא הצלחנו לשמור את ההצבעה. נסו שוב.";
+    setStatus(statusId, text, "error");
+    announce(text);
+    btn.disabled = false;
+  }
+}
+
+// --- הדיווחים והבקשות שלי (מתפריט הפרופיל) ---
+
+function reportStatus(r) {
+  if (r.status === "approved" && Date.now() - new Date(r.decided_at) > REPORT_DAYS * 864e5) return STATUS_TEXT.expired;
+  return STATUS_TEXT[r.status] || r.status;
+}
+
+function mineItem(title, status, reason) {
+  const li = el("li", { class: "mine-item" });
+  const info = el("div", { class: "request-info" });
+  info.append(el("span", { class: "mine-name" }, title), el("span", { class: `mine-state state-${status === STATUS_TEXT.rejected ? "rejected" : "other"}` }, status));
+  if (reason) info.append(el("span", { class: "mine-reason" }, `הסיבה: ${reason}`));
+  li.append(info);
+  return li;
+}
+
+async function openMyReports() {
+  closeProfileMenu(false);
+  $("mine-title").textContent = "הדיווחים שלי";
+  $("mine-list").replaceChildren();
+  $("mine-status").textContent = "טוענים...";
+  openDialog("mine-dialog");
+  try {
+    const rows = await community.myReports();
+    for (const r of rows) {
+      const product = byBarcode.get(r.barcode);
+      const chain = chainById(r.chain_id);
+      const title = `${product ? product.name : r.barcode} · ${chain ? chain.name : r.chain_id} · ${shekels(r.price)}`;
+      $("mine-list").append(mineItem(title, reportStatus(r), r.status === "rejected" ? r.reject_reason : ""));
+    }
+    $("mine-status").textContent = rows.length ? "" : "עוד לא דיווחתם. אפשר לדווח ממסך התוצאות, בכפתור \"דווחו\".";
+  } catch (err) {
+    if (err.signedOut) closeDialog("mine-dialog");
+    else $("mine-status").textContent = "לא הצלחנו לטעון. נסו שוב.";
+  }
+}
+
+async function openMyRequests() {
+  closeProfileMenu(false);
+  $("mine-title").textContent = "הבקשות והקולות שלי";
+  if (!$("mine-dialog").open) {
+    $("mine-list").replaceChildren();
+    $("mine-status").textContent = "טוענים...";
+    openDialog("mine-dialog");
+  }
+  try {
+    const [mine, list, used] = await Promise.all([community.myRequests(), community.listRequests(), community.myActiveVotes()]);
+    const ul = $("mine-list");
+    ul.replaceChildren();
+    $("mine-status").textContent = `${used} מתוך 5 קולות בשימוש`;
+    if (mine.length) {
+      ul.append(el("li", { class: "mine-heading" }, "הבקשות שלי"));
+      for (const r of mine) ul.append(mineItem(r.name, STATUS_TEXT[r.status] || r.status, r.status === "rejected" ? r.reject_reason : ""));
+    }
+    const voted = list.filter((r) => r.my_vote);
+    if (voted.length) {
+      ul.append(el("li", { class: "mine-heading" }, "הצבעתי על"));
+      voted.forEach((r) => ul.append(requestItem(r)));
+    }
+    if (!mine.length && !voted.length) {
+      ul.append(el("li", { class: "mine-empty" }, "עוד אין בקשות או קולות. חסר לכם מוצר? בקשו אותו בבניית הסל."));
+    }
+  } catch (err) {
+    if (err.signedOut) closeDialog("mine-dialog");
+    else $("mine-status").textContent = "לא הצלחנו לטעון. נסו שוב.";
+  }
+}
+
+function setupCommunity() {
+  $("report-product").addEventListener("change", updateOfficial);
+  $("report-chain").addEventListener("change", updateOfficial);
+  $("report-form").addEventListener("submit", sendReport);
+  $("btn-report-close").addEventListener("click", () => closeDialog("report-dialog"));
+
+  $("btn-requests").addEventListener("click", () => openRequests());
+  $("btn-request-missing").addEventListener("click", () => openRequests($("search").value.trim()));
+  $("request-form").addEventListener("submit", sendRequest);
+  $("request-name").addEventListener("input", renderSimilar);
+  $("btn-requests-close").addEventListener("click", () => closeDialog("requests-dialog"));
+  $("requests-dialog").addEventListener("click", (e) => {
+    const btn = e.target.closest(".btn-vote");
+    if (btn) toggleVote(btn, "request-status", loadRequests);
+  });
+
+  $("btn-my-reports").addEventListener("click", () => openMyReports());
+  $("btn-my-requests").addEventListener("click", () => openMyRequests());
+  $("btn-mine-close").addEventListener("click", () => closeDialog("mine-dialog"));
+  $("mine-dialog").addEventListener("click", (e) => {
+    const btn = e.target.closest(".btn-vote");
+    if (btn) toggleVote(btn, "mine-status", openMyRequests);
+  });
+}
+
 async function setupAuth() {
   auth.onChange(renderProfile);
 
@@ -801,7 +1207,7 @@ async function setupAuth() {
   });
   $("btn-login-close").addEventListener("click", () => closeDialog("login-dialog"));
   $("btn-info-close").addEventListener("click", () => closeDialog("info-dialog"));
-  ["login-dialog", "info-dialog"].forEach((id) => {
+  ["login-dialog", "info-dialog", "report-dialog", "requests-dialog", "mine-dialog"].forEach((id) => {
     $(id).addEventListener("close", () => {
       if (id === "login-dialog") pendingAction = null;
       if (dialogOpener && document.contains(dialogOpener) && !dialogOpener.closest("[hidden]")) dialogOpener.focus();
@@ -825,17 +1231,19 @@ async function setupAuth() {
     $("build-title").focus({ preventScroll: true });
   });
   $("btn-delete-account").addEventListener("click", handleDeleteAccount);
+  setupCommunity();
 
   const { error, pending } = await auth.init();
   renderProfile(auth.getUser());
   if (error) showInfo("הכניסה לא הצליחה", "לא הצלחנו להתחבר עם Google. נסו שוב.");
-  else if (pending && ACTIONS[pending] && auth.getUser()) ACTIONS[pending]();
   else if (auth.getUser() && pending === null) announce(`מחובר בתור ${auth.getUser().name}`);
+  // הפעולה שהתחילה לפני הכניסה ממשיכה אחרי שהמוצרים נטענו (init)
+  return { pending: error ? null : pending };
 }
 
 async function init() {
   // ההתחברות לא מעכבת את טעינת האתר. אם היא נכשלת, האתר עובד כרגיל בלי חשבון
-  setupAuth().catch(() => {});
+  const authReady = setupAuth().catch(() => ({}));
   try {
     [products, allChains] = await Promise.all([
       loadJson("data/products.json?v=60"),
@@ -920,6 +1328,9 @@ async function init() {
   $("btn-back").addEventListener("click", goBuild);
   history.replaceState({ screen: "screen-build", depth: 0 }, "");
   window.addEventListener("popstate", handlePopState);
+
+  const { pending } = await authReady;
+  if (pending && ACTIONS[pending] && auth.getUser()) ACTIONS[pending]();
 }
 
 init();
