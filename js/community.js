@@ -99,3 +99,39 @@ export async function vote(requestId) {
 export function unvote(requestId) {
   return call(`request_votes?request_id=eq.${Number(requestId)}`, { method: "DELETE", auth: true });
 }
+
+// ---- פופולריים השבוע ----
+
+// הוספה ידנית לסל, בלי זהות. כישלון לא מעניין את המשתמש
+export function logBasketAdd(city, barcode) {
+  return call("rpc/log_basket_add", { method: "POST", body: { p_city: city, p_barcode: barcode } });
+}
+
+// הברקודים שנוספו הכי הרבה ב-7 הימים האחרונים בעיר, מהפופולרי ביותר
+export async function fetchPopular(city) {
+  const rows = await call("rpc/popular_products", { method: "POST", body: { p_city: city } });
+  return rows.map((r) => r.barcode);
+}
+
+// ---- מונה חיסכון אישי ----
+
+// מחזיר: ok, limit, invalid, signed_out
+export function recordSaving({ amount, kind, chainId, city }) {
+  return call("rpc/record_saving", {
+    method: "POST",
+    auth: true,
+    body: { p_amount: amount, p_kind: kind, p_chain_id: chainId, p_city: city },
+  });
+}
+
+// { total, purchases, month_total }
+export async function mySavings() {
+  const rows = await call("rpc/my_savings", { method: "POST", auth: true, body: {} });
+  const r = rows[0] || {};
+  return { total: Number(r.total) || 0, purchases: Number(r.purchases) || 0, month: Number(r.month_total) || 0 };
+}
+
+// מוחק את הקנייה האחרונה מהמונה. מחזיר: ok, none, signed_out
+export function undoLastSaving() {
+  return call("rpc/undo_last_saving", { method: "POST", auth: true, body: {} });
+}

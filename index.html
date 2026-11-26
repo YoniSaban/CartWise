@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=33">
+  <link rel="stylesheet" href="css/style.css?v=35">
 </head>
 <body>
   <header class="topbar">
@@ -24,6 +24,11 @@
         <div id="profile-menu" class="profile-menu" hidden>
           <p id="profile-name" class="profile-name"></p>
           <p id="profile-email" class="profile-email" dir="ltr"></p>
+          <div class="profile-savings">
+            <p id="savings-total" class="savings-total">החיסכון שלי</p>
+            <p id="savings-meta" class="savings-meta"></p>
+            <button id="btn-undo-saving" type="button" class="link-btn savings-undo" hidden>ביטול הקנייה האחרונה</button>
+          </div>
           <button id="btn-my-reports" type="button" class="profile-item">הדיווחים שלי</button>
           <button id="btn-my-requests" type="button" class="profile-item">הבקשות והקולות שלי</button>
           <a href="privacy.html" class="profile-item">מדיניות פרטיות</a>
@@ -45,6 +50,10 @@
         </div>
       </div>
       <p class="subtitle">בחרו מוצרים וקבעו כמות לכל מוצר</p>
+      <section id="popular-section" class="popular" aria-labelledby="popular-title" hidden>
+        <h2 id="popular-title" class="popular-title">פופולריים השבוע</h2>
+        <ul id="popular" class="popular-list" aria-labelledby="popular-title"></ul>
+      </section>
       <div class="auto-row">
         <button id="btn-auto" type="button" class="btn-secondary btn-auto" hidden>🛒 סל אוטומטי</button>
         <button type="button" class="btn-clear js-clear" disabled>נקה סל</button>
@@ -216,6 +225,6 @@
 
   <p id="announcer" class="visually-hidden" aria-live="polite"></p>
 
-  <script type="module" src="js/app.js?v=79"></script>
+  <script type="module" src="js/app.js?v=81"></script>
 </body>
 </html>

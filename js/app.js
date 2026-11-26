@@ -4,7 +4,7 @@ import { fetchAutoBasket, fetchChainUpdates, fetchPrices } from "./prices.js?v=1
 import { codeIn, compareBasket, formatPrice, parseChainSize, parseSizeText, splitBasket, splitUnavailable, unitPrice } from "./compare.js?v=15";
 import { findSubstitutes } from "./substitutes.js?v=12";
 import * as auth from "./auth.js?v=1";
-import * as community from "./community.js?v=1";
+import * as community from "./community.js?v=3";
 
 const $ = (id) => document.getElementById(id);
 
@@ -25,6 +25,9 @@ let lastUpdates = new Map();
 let suggestions = new Map();
 // דיווחי "מצאתי זול יותר" מאושרים ובתוקף: "chain_id:barcode" -> מחיר בשקלים
 let lastReports = new Map();
+// "פופולריים השבוע" בעיר שנבחרה (ברקודים), והאם כבר נספרה קנייה במונה בהשוואה הנוכחית ("chain" / "split")
+let popularBarcodes = [];
+let lastSaved = null;
 
 // החיפוש מתעלם מגרשיים, ממרכאות ומרווחים מיותרים: קוטג' = קוטג
 function normalize(text) {
@@ -110,6 +113,84 @@ function renderProducts() {
   $("request-hint").hidden = Boolean(shown.length) || !query;
 }
 
+// ---- פופולריים השבוע ----
+
+const POPULAR_COUNT = 8;
+const ADDS_KEY = "cartwise-adds";
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+// הוספה ידנית לסל נשלחת ל-Supabase בלי זהות: עיר וברקוד.
+// אותו מוצר מאותו דפדפן נספר פעם בשבוע, כדי שהוספה והסרה חוזרות לא ינפחו את הדירוג
+function trackAdd(barcode) {
+  const city = $("city").value;
+  const key = `${city}:${barcode}`;
+  const now = Date.now();
+  let seen = {};
+  try {
+    seen = JSON.parse(localStorage.getItem(ADDS_KEY)) || {};
+  } catch {
+    seen = {};
+  }
+  for (const k of Object.keys(seen)) if (!(now - seen[k] < WEEK_MS)) delete seen[k];
+  if (seen[key]) return;
+  seen[key] = now;
+  try {
+    localStorage.setItem(ADDS_KEY, JSON.stringify(seen));
+  } catch {
+    // localStorage לא זמין: נספר בכל זאת
+  }
+  community.logBasketAdd(city, barcode).catch(() => {});
+}
+
+// שורה של 8 כרטיסים קטנים. לחיצה מוסיפה לסל, ולחיצה נוספת מסירה, כמו בגריד
+function renderPopular() {
+  const list = $("popular");
+  list.replaceChildren();
+  $("popular-section").hidden = !popularBarcodes.length;
+  for (const b of popularBarcodes) {
+    const p = byBarcode.get(b);
+    const inBasket = basket.has(b);
+    const li = el("li", { class: inBasket ? "popular-card in-basket" : "popular-card" });
+    const btn = el("button", {
+      type: "button",
+      class: "popular-add",
+      "data-action": "pop",
+      "data-barcode": b,
+      "aria-label": inBasket ? `${p.name} בסל. לחצו כדי להסיר` : `הוסף ${p.name} לסל`,
+      "aria-pressed": String(inBasket),
+    });
+    btn.append(
+      el("img", { src: p.image, alt: "", loading: "lazy", width: 96, height: 96 }),
+      el("span", { class: "add-badge", "aria-hidden": "true" }, inBasket ? "✓" : "+"),
+      el("span", { class: "popular-name" }, p.name)
+    );
+    li.append(btn);
+    list.append(li);
+  }
+}
+
+// 8 המוצרים שנוספו הכי הרבה ב-7 הימים האחרונים בעיר. כשאין מספיק, משלימים מהסל האוטומטי של העיר.
+// טעינה שנכשלה מסתירה את השורה. החלפת עיר בזמן טעינה: רק התשובה האחרונה מוצגת
+let popularRequest = 0;
+async function loadPopular() {
+  const request = ++popularRequest;
+  let top = null;
+  try {
+    top = (await community.fetchPopular($("city").value)).filter((b) => byBarcode.has(b)).slice(0, POPULAR_COUNT);
+  } catch {
+    top = null;
+  }
+  if (request !== popularRequest) return;
+  if (top) {
+    for (const b of autoBarcodes) {
+      if (top.length >= POPULAR_COUNT) break;
+      if (!top.includes(b)) top.push(b);
+    }
+  }
+  popularBarcodes = top ?? [];
+  renderPopular();
+}
+
 // כפתור קטגוריה מסנן את הרשימה. לחיצה נוספת על אותה קטגוריה מבטלת את הסינון.
 // שתי שורות: בעליונה, ליד החיפוש, "שתייה", "מזון יבש" ו"לחם". בתחתונה שאר הקטגוריות.
 const TOP_CATEGORIES = ["שתייה", "מזון יבש", "לחם"];
@@ -173,6 +254,7 @@ function renderBasket() {
 }
 
 function render() {
+  renderPopular();
   renderProducts();
   renderBasket();
 }
@@ -194,14 +276,17 @@ function handleClick(event) {
   const removeIndex = action === "remove"
     ? [...document.querySelectorAll('#basket [data-action="remove"]')].indexOf(btn) : 0;
 
-  if (action === "add") {
-    // לחיצה מוסיפה, לחיצה נוספת מסירה. המשתמש נשאר בגריד, על אותו כרטיס
+  if (action === "add" || action === "pop") {
+    // לחיצה מוסיפה, לחיצה נוספת מסירה. המשתמש נשאר בגריד (או בשורת הפופולריים), על אותו כרטיס
     const had = basket.has(barcode);
     if (had) basket.remove(barcode);
-    else basket.add(barcode);
+    else {
+      basket.add(barcode);
+      trackAdd(barcode);
+    }
     render();
     announce(`${name} ${had ? "הוסר מהסל" : "נוסף לסל"}. בסל ${countText(basket.items().length)}`);
-    focusButton("add", barcode);
+    focusButton(action, barcode);
   } else if (action === "inc" || action === "dec") {
     basket.changeQty(barcode, action === "inc" ? 1 : -1);
     render();
@@ -328,6 +413,7 @@ function renderResults({ results, notFound }, counted) {
     );
     if (r.cheapest && saving > 0) {
       li.append(el("p", { class: "result-saving" }, `חיסכון של ${formatPrice(saving)} לעומת הרשת היקרה`));
+      li.append(boughtButton("קניתי כאן ✓", { amount: saving, kind: "chain", chainId: r.chain.chain_id }));
     }
     const at = updated.get(r.chain.chain_id);
     if (at && Date.now() - new Date(at) > STALE_MS) {
@@ -368,7 +454,8 @@ function renderResults({ results, notFound }, counted) {
 }
 
 // כרטיס "סל מפוצל": הסל הזול ביותר בשתי רשתות. split: מ-splitBasket, null מסתיר את הכרטיס
-function renderSplit(split) {
+// maxComplete: הסל היקר ביותר מבין הרשתות עם סל מלא (באגורות). ממנו נספר החיסכון במונה
+function renderSplit(split, maxComplete = 0) {
   const box = $("split");
   box.replaceChildren();
   box.hidden = !split;
@@ -384,6 +471,13 @@ function renderSplit(split) {
       ? `חיסכון של ${formatPrice(split.saving)} לעומת הסל הזול ברשת אחת (${split.base.name})`
       : "משלים את כל הסל בשתי רשתות")
   );
+  const vsExpensive = maxComplete - split.total;
+  if (vsExpensive > 0) {
+    box.append(
+      el("p", { class: "bought-note" }, `ייספר במונה: חיסכון של ${formatPrice(vsExpensive)} לעומת הרשת היקרה`),
+      boughtButton("קניתי בסל המפוצל ✓", { amount: vsExpensive, kind: "split", chainId: null })
+    );
+  }
   for (const part of split.parts) {
     const sec = el("div", { class: "split-part" });
     const ph = el("div", { class: "result-head" });
@@ -470,7 +564,8 @@ function showResults(nav = "push") {
   const { results, notFound } = comparison;
   renderResults(comparison, lastItems.length - notFound.length);
   const split = splitBasket(lastItems, byBarcode, chains, lastRows);
-  renderSplit(split);
+  const complete = results.filter((r) => r.complete);
+  renderSplit(split, complete.length ? Math.max(...complete.map((r) => r.total)) : 0);
   $("not-found-section").hidden = false;
   const best = results.find((r) => r.cheapest);
   const lost = !notFound.length ? ""
@@ -590,6 +685,7 @@ function handleDecision(event) {
 async function compare() {
   const items = basket.items();
   if (!items.length) return;
+  lastSaved = null;
   showScreen("screen-results");
   $("results").replaceChildren();
   $("not-found-section").hidden = true;
@@ -723,6 +819,7 @@ function setupCity() {
 const ACTIONS = {
   report: () => openReport(),
   requests: () => openRequests(sessionStorage.getItem(DRAFT_KEY) || ""),
+  saving: () => sendPendingSaving(),
 };
 const DRAFT_KEY = "cartwise-request-draft";
 
@@ -776,6 +873,7 @@ function renderProfile(user) {
 }
 
 function openProfileMenu() {
+  loadSavings();
   $("profile-menu").hidden = false;
   $("profile-btn").setAttribute("aria-expanded", "true");
   $("profile-menu").querySelector(".profile-item").focus();
@@ -820,6 +918,148 @@ async function handleDeleteAccount() {
   } finally {
     btn.disabled = false;
   }
+}
+
+// ---- מונה חיסכון אישי ----
+
+// הקנייה ממתינה כאן בזמן המעבר ל-Google, ונספרת אחרי החזרה
+const SAVING_KEY = "cartwise-pending-saving";
+
+function shekelText(value) {
+  return formatPrice(Math.round(value * 100));
+}
+
+// כפתור "קניתי" בכרטיס התוצאה. purchase.amount באגורות.
+// בכל השוואה נספרת קנייה אחת: אחרי הספירה שני הכפתורים (רשת וסל מפוצל) נסגרים
+// אחרי הספירה מופיע "ביטול", שמוריד את הקנייה מהמונה ופותח את הכפתורים מחדש
+function boughtButton(text, purchase) {
+  const wrap = el("div", { class: "bought" });
+  const row = el("div", { class: "bought-row" });
+  const btn = el("button", { type: "button", class: "btn-bought", "data-label": text }, lastSaved === purchase.kind ? "נספר במונה ✓" : text);
+  btn.disabled = Boolean(lastSaved);
+  const undoBtn = el("button", { type: "button", class: "btn-undo", "aria-label": "ביטול: הורדת הקנייה מהמונה" }, "ביטול");
+  undoBtn.hidden = lastSaved !== purchase.kind;
+  const status = el("p", { class: "bought-status", "aria-live": "polite" });
+  btn.addEventListener("click", () => buy({ ...purchase, amount: purchase.amount / 100, city: $("city").value }, btn, undoBtn, status));
+  undoBtn.addEventListener("click", () => undoBought(btn, undoBtn, status));
+  row.append(btn, undoBtn);
+  wrap.append(row, status);
+  return wrap;
+}
+
+// מחזיר את כפתורי "קניתי" במסך התוצאות למצב לפני ספירה
+function resetBought() {
+  lastSaved = null;
+  document.querySelectorAll(".btn-bought").forEach((b) => {
+    b.disabled = false;
+    b.textContent = b.dataset.label;
+  });
+  document.querySelectorAll(".btn-undo").forEach((b) => (b.hidden = true));
+}
+
+async function undoBought(btn, undoBtn, status) {
+  undoBtn.disabled = true;
+  status.textContent = "מבטלים...";
+  try {
+    const res = await community.undoLastSaving();
+    if (res !== "ok" && res !== "none") throw new Error(res);
+    resetBought();
+    status.textContent = "בוטל. הקנייה הוסרה מהמונה";
+    btn.focus();
+  } catch {
+    status.textContent = "לא הצלחנו לבטל. נסו שוב.";
+  }
+  undoBtn.disabled = false;
+}
+
+async function buy(purchase, btn, undoBtn, status) {
+  if (!auth.getUser()) {
+    try {
+      sessionStorage.setItem(SAVING_KEY, JSON.stringify(purchase));
+    } catch {
+      // בלי sessionStorage הקנייה לא תיספר אחרי הכניסה
+    }
+    requireLogin("saving");
+    return;
+  }
+  btn.disabled = true;
+  status.textContent = "סופרים...";
+  const result = await savePurchase(purchase);
+  status.textContent = result.text;
+  if (result.ok) {
+    lastSaved = purchase.kind;
+    document.querySelectorAll(".btn-bought").forEach((b) => (b.disabled = true));
+    btn.textContent = "נספר במונה ✓";
+    undoBtn.hidden = false;
+  } else if (!result.limit) {
+    btn.disabled = false;
+  }
+}
+
+// amount בשקלים. מחזיר { ok, limit, text }
+async function savePurchase(purchase) {
+  const failed = { ok: false, text: "לא הצלחנו לספור את הקנייה. נסו שוב." };
+  try {
+    const res = await community.recordSaving(purchase);
+    if (res === "limit") return { ok: false, limit: true, text: "אפשר לספור עד 3 קניות ביום. נסו שוב מחר." };
+    if (res !== "ok") return failed;
+    const total = await community.mySavings().then((s) => s.total).catch(() => null);
+    return {
+      ok: true,
+      text: `נוסף למונה: ${shekelText(purchase.amount)}.` + (total === null ? "" : ` חסכתם עד היום ${shekelText(total)}`),
+    };
+  } catch {
+    return failed;
+  }
+}
+
+// אחרי החזרה מ-Google: הקנייה שנלחצה לפני הכניסה נספרת, והתוצאה בחלון הודעה
+async function sendPendingSaving() {
+  let purchase = null;
+  try {
+    purchase = JSON.parse(sessionStorage.getItem(SAVING_KEY));
+    sessionStorage.removeItem(SAVING_KEY);
+  } catch {
+    purchase = null;
+  }
+  if (!(purchase?.amount > 0)) return;
+  const result = await savePurchase(purchase);
+  showInfo(result.ok ? "החיסכון נספר" : "החיסכון לא נספר", result.text);
+}
+
+// המונה בראש תפריט הפרופיל. נטען בכל פתיחה של התפריט
+async function loadSavings() {
+  const total = $("savings-total");
+  const meta = $("savings-meta");
+  total.textContent = "החיסכון שלי";
+  meta.textContent = "טוען...";
+  $("btn-undo-saving").hidden = true;
+  try {
+    const s = await community.mySavings();
+    $("btn-undo-saving").hidden = !s.purchases;
+    total.textContent = `החיסכון שלי: ${shekelText(s.total)}`;
+    meta.textContent = s.purchases
+      ? `${s.purchases === 1 ? "קנייה אחת" : `${s.purchases} קניות`} · ${shekelText(s.month)} החודש`
+      : "עוד לא ספרנו חיסכון. אחרי השוואה, לחצו \"קניתי כאן\"";
+  } catch {
+    meta.textContent = "לא הצלחנו לטעון את המונה";
+  }
+}
+
+// ביטול מהתפריט: גם לקנייה שנספרה אחרי החזרה מ-Google, כשמסך התוצאות כבר לא פתוח
+async function undoFromMenu() {
+  const btn = $("btn-undo-saving");
+  btn.disabled = true;
+  try {
+    const res = await community.undoLastSaving();
+    if (res !== "ok" && res !== "none") throw new Error(res);
+    resetBought();
+    await loadSavings();
+    $("profile-status").textContent = "הקנייה האחרונה הוסרה מהמונה";
+  } catch {
+    $("profile-status").textContent = "לא הצלחנו לבטל. נסו שוב.";
+  }
+  btn.disabled = false;
 }
 
 // ---- קהילה: "מצאתי זול יותר", בקשות מוצרים והצבעה ----
@@ -1231,6 +1471,7 @@ async function setupAuth() {
     $("build-title").focus({ preventScroll: true });
   });
   $("btn-delete-account").addEventListener("click", handleDeleteAccount);
+  $("btn-undo-saving").addEventListener("click", undoFromMenu);
   setupCommunity();
 
   const { error, pending } = await auth.init();
@@ -1258,8 +1499,13 @@ async function init() {
   setupCity();
   // "סל אוטומטי": נבנה ב-Supabase אחרי כל עדכון מחירים. אם לא נטען, קובץ גיבוי. אם גם הוא לא, הכפתור לא מופיע
   await refreshAutoBasket();
-  // סל אוטומטי נפרד לכל עיר: החלפת עיר טוענת את הסל של העיר החדשה
-  $("city").addEventListener("change", refreshAutoBasket);
+  // הפופולריים לא מעכבים את הגריד
+  loadPopular();
+  // סל אוטומטי ופופולריים נפרדים לכל עיר: החלפת עיר טוענת את אלה של העיר החדשה
+  $("city").addEventListener("change", async () => {
+    await refreshAutoBasket();
+    loadPopular();
+  });
   basket.load(new Set(byBarcode.keys()), new Set(products.filter((p) => p.unit === "kg").map((p) => p.barcode)));
   renderCategories();
   render();
@@ -1281,6 +1527,7 @@ async function init() {
     $("search").focus();
   });
   $("products").addEventListener("click", handleClick);
+  $("popular").addEventListener("click", handleClick);
   $("basket").addEventListener("click", handleClick);
   document.querySelectorAll(".js-compare").forEach((btn) => btn.addEventListener("click", compare));
   $("btn-to-basket").addEventListener("click", goBasket);
