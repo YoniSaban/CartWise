@@ -23,3 +23,6 @@ desktop.ini
 
 # Word copies of the campaign files, kept locally only
 campaign/*.docx
+
+# חדר הבקרה של הסוכנים (מקומי)
+.agency/
