@@ -38,3 +38,25 @@ export async function fetchAutoBasket(city) {
   if (!res.ok) throw new Error(`Supabase ${res.status}`);
   return (await res.json()).map((r) => r.barcode);
 }
+
+// המבצעים בתוקף של ברקודי הסל (מיילסטון 14). הטבלה מחזירה רק מבצעים בתוקף (הרשאות).
+// מחזיר Map "chain_id:item_code" -> [מבצע]
+export async function fetchPromos(codes, chainIds) {
+  if (!codes.length) return new Map();
+  const params = new URLSearchParams({
+    select: "chain_id,item_code,promo_id,description,kind,min_qty,bundle_price,discount_rate,max_qty,club_only,ends_at",
+    item_code: `in.(${codes.join(",")})`,
+    chain_id: `in.(${chainIds.join(",")})`,
+  });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/chain_promos?${params}`, {
+    headers: { apikey: SUPABASE_PUBLISHABLE_KEY },
+  });
+  if (!res.ok) throw new Error(`Supabase ${res.status}`);
+  const promos = new Map();
+  for (const p of await res.json()) {
+    const key = `${p.chain_id}:${p.item_code}`;
+    if (!promos.has(key)) promos.set(key, []);
+    promos.get(key).push(p);
+  }
+  return promos;
+}

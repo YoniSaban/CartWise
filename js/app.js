@@ -1,7 +1,7 @@
 // מעבר בין מסכים: "בניית סל", "הסל שלי", "המלצת חלופות" ו"פלט תוצאות"
 import * as basket from "./basket.js?v=12";
-import { fetchAutoBasket, fetchChainUpdates, fetchPrices } from "./prices.js?v=15";
-import { codeIn, compareBasket, formatPrice, parseChainSize, parseSizeText, splitBasket, splitUnavailable, unitPrice } from "./compare.js?v=15";
+import { fetchAutoBasket, fetchChainUpdates, fetchPrices, fetchPromos } from "./prices.js?v=16";
+import { codeIn, compareBasket, formatPrice, parseChainSize, parseSizeText, splitBasket, splitUnavailable, unitPrice } from "./compare.js?v=16";
 import { findSubstitutes } from "./substitutes.js?v=12";
 import * as auth from "./auth.js?v=1";
 import * as community from "./community.js?v=3";
@@ -19,6 +19,8 @@ let autoBarcodes = [];
 // ההשוואה האחרונה: הסל, המחירים מ-Supabase, וההצעות לחלופות ("chain:barcode" -> הצעה)
 let lastItems = [];
 let lastRows = [];
+// המבצעים בתוקף של הסל (מיילסטון 14). null: לא נטענו, ואז מחירי מדף בלבד
+let lastPromos = null;
 // מוצרים שהרשת הפסיקה למכור ("chain_id:item_code"), והעדכון האחרון של כל רשת (chain_id -> loaded_at)
 let lastUnavailable = new Set();
 let lastUpdates = new Map();
@@ -403,6 +405,7 @@ function renderResults({ results, notFound }, counted) {
     head.append(el("h3", { class: "chain-name" }, r.chain.name));
     if (r.cheapest) head.append(el("span", { class: "tag tag-cheapest" }, "✓ הזול ביותר"));
     if (r.substituted.length) head.append(el("span", { class: "tag tag-sub" }, "⇄ חלופה"));
+    if (r.promoSaving > 0) head.append(el("span", { class: "tag tag-promo" }, "מבצע!"));
     if (r.cheapestPartial) head.append(el("span", { class: "tag tag-cheapest-partial" }, "✓ הזול מבין החלקיים"));
     if (!r.complete) head.append(el("span", { class: "tag tag-partial" }, "חלקי"));
     li.append(
@@ -411,6 +414,7 @@ function renderResults({ results, notFound }, counted) {
       el("p", { class: "price" }, formatPrice(r.total)),
       el("p", { class: r.complete ? "result-status" : "result-status partial" }, statusText(r, counted))
     );
+    if (r.promoSaving > 0) li.append(el("p", { class: "result-promo" }, `חסכת במבצעים ${formatPrice(r.promoSaving)}`));
     if (r.cheapest && saving > 0) {
       li.append(el("p", { class: "result-saving" }, `חיסכון של ${formatPrice(saving)} לעומת הרשת היקרה`));
       li.append(boughtButton("קניתי כאן ✓", { amount: saving, kind: "chain", chainId: r.chain.chain_id }));
@@ -488,12 +492,14 @@ function renderSplit(split, maxComplete = 0) {
     }
     ph.append(el("h3", { class: "chain-name" }, part.chain.name), el("span", { class: "split-subtotal" }, formatPrice(part.total)));
     const ul = el("ul", { class: "breakdown-list" });
-    for (const { barcode, qty, amount } of part.lines) {
+    for (const { barcode, qty, amount, promo } of part.lines) {
       const li = el("li");
       li.append(
         el("span", { class: "breakdown-name" }, `${byBarcode.get(barcode).name} × ${qtyText(barcode, qty)}`),
         el("span", { class: "breakdown-price" }, formatPrice(amount))
       );
+      const tags = promoTags(promo, null, null);
+      if (tags) li.append(tags);
       ul.append(li);
     }
     // רשימת המוצרים סגורה עד לחיצה, כמו "פירוט מחירים"
@@ -502,6 +508,27 @@ function renderSplit(split, maxComplete = 0) {
     sec.append(ph, el("p", { class: "chain-store" }, part.chain.store_name), details);
     box.append(sec);
   }
+}
+
+// תגיות המבצע של שורה: "מבצע!" עם התיאור מהקובץ, "קנו ..." למבצע כמות שעוד לא חל, ו"למועדון"
+// הטקסט נבנה מהמספרים בקובץ, ולא מהתיאור החופשי של הרשת, כדי שיהיה אחיד בכל הרשתות
+function dealText(p) {
+  const n = Number(p.min_qty) || 1;
+  const nis = (v) => formatPrice(Math.round(Number(v) * 100));
+  let text = p.kind === "bundle" ? `${n} ב-${nis(p.bundle_price)}`
+    : p.kind === "percent" ? (n > 1 ? `ה-${n} ב-${Number(p.discount_rate)}% הנחה` : `${Number(p.discount_rate)}% הנחה`)
+    : n > 1 ? `${nis(p.bundle_price)} ליחידה, בקנייה של ${n}` : `${nis(p.bundle_price)} ליחידה`;
+  if (p.max_qty) text += `, עד ${Number(p.max_qty)} יחידות`;
+  return text;
+}
+
+function promoTags(promo, hint, club) {
+  if (!promo && !hint && !club) return null;
+  const box = el("span", { class: "breakdown-promo" });
+  if (promo) box.append(el("span", { class: "tag tag-promo" }, "מבצע!"), ` ${dealText(promo)}`);
+  else if (hint) box.append(el("span", { class: "tag tag-promo" }, "מבצע!"), ` ${dealText(hint)}. כדאי להוסיף לסל`);
+  if (club) box.append(el("span", { class: "tag tag-club" }, "למועדון"), ` ${dealText(club)}`);
+  return box;
 }
 
 // פירוט המחירים ברשת: שורה לכל מוצר, סגור עד לחיצה
@@ -526,13 +553,18 @@ function breakdown(r) {
   const details = el("details", { class: "breakdown" });
   details.append(el("summary", {}, "פירוט מחירים"));
   const ul = el("ul", { class: "breakdown-list" });
-  for (const { barcode, qty, amount, sub } of r.lines) {
+  for (const { barcode, qty, amount, regular, sub, promo, hint, club } of r.lines) {
     const li = el("li", amount == null ? { class: "missing" } : {});
     const name = sub ? `⇄ ${sub.item_name}` : byBarcode.get(barcode).name;
-    li.append(
-      el("span", { class: "breakdown-name" }, `${name} × ${qtyText(barcode, qty)}`),
-      el("span", { class: "breakdown-price" }, amount == null ? missingWord(r.chain, barcode) : formatPrice(amount))
-    );
+    const price = el("span", { class: "breakdown-price" });
+    if (amount == null) price.append(missingWord(r.chain, barcode));
+    else if (promo) {
+      // מחיר המדף מחוק, ולידו המחיר אחרי המבצע
+      price.append(el("s", { class: "breakdown-regular" }, formatPrice(regular)), " ", formatPrice(amount));
+    } else price.append(formatPrice(amount));
+    li.append(el("span", { class: "breakdown-name" }, `${name} × ${qtyText(barcode, qty)}`), price);
+    const tags = promoTags(promo, hint, club);
+    if (tags) li.append(tags);
     const reported = !sub && amount != null && reportedPrice(r.chain, barcode);
     if (reported) li.append(el("span", { class: "breakdown-report" }, reported));
     ul.append(li);
@@ -560,10 +592,13 @@ function showResults(nav = "push") {
   $("results-status").textContent = "";
   $("results-title").focus();
 
-  const comparison = compareBasket(lastItems, byBarcode, chains, lastRows, approvedSubstitutes());
+  const comparison = compareBasket(lastItems, byBarcode, chains, lastRows, approvedSubstitutes(), lastPromos ?? new Map());
   const { results, notFound } = comparison;
   renderResults(comparison, lastItems.length - notFound.length);
-  const split = splitBasket(lastItems, byBarcode, chains, lastRows);
+  const split = splitBasket(lastItems, byBarcode, chains, lastRows, lastPromos ?? new Map());
+  $("price-note").textContent = lastPromos
+    ? "כולל מבצעים לכל הלקוחות. מבצעי מועדון מסומנים ולא נכללים במחיר"
+    : "מחירי מדף, לא כולל מבצעים";
   const complete = results.filter((r) => r.complete);
   renderSplit(split, complete.length ? Math.max(...complete.map((r) => r.total)) : 0);
   $("not-found-section").hidden = false;
@@ -703,13 +738,16 @@ async function compare() {
     }))];
     const ids = chains.map((c) => c.chain_id);
     // דיווחים מאושרים: אם נכשל, ההשוואה ממשיכה בלעדיהם
-    const [rows, updates, reports] = await Promise.all([
+    // מבצעים: אם נכשל, ההשוואה ממשיכה במחירי מדף
+    const [rows, updates, reports, promos] = await Promise.all([
       fetchPrices(codes, ids),
       fetchChainUpdates(ids),
       community.fetchApprovedReports(ids).catch(() => new Map()),
+      fetchPromos(codes, ids).catch(() => null),
       minShow,
     ]);
     lastReports = reports;
+    lastPromos = promos;
     // מוצר שהרשת הפסיקה למכור לא נכנס לחישוב, ומוצג "לא זמין"
     ({ fresh: lastRows, unavailable: lastUnavailable } = splitUnavailable(rows, updates));
     lastUpdates = updates;

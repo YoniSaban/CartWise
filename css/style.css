@@ -870,3 +870,17 @@ button[aria-disabled="true"] { cursor: default; }
 }
 .btn-undo[hidden], .savings-undo[hidden] { display: none; }
 .savings-undo { margin-top: 4px; min-height: 32px; font-size: 13px; color: var(--error); }
+
+/* מיילסטון 14: מבצעים */
+.tag-promo { color: var(--white); background: #C4320A; }
+.tag-club { color: #6941C6; background: #F4F3FF; }
+.result-promo { margin: 2px 0 0; font-size: 14px; font-weight: 500; color: #C4320A; }
+.breakdown-regular { color: var(--text-muted); font-weight: 400; }
+.breakdown-promo {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.breakdown-promo .tag { font-size: 12px; padding: 1px 8px; }
+.breakdown-promo .tag-club { margin-inline-start: 6px; }
+.breakdown-list li:has(.breakdown-promo) { flex-wrap: wrap; row-gap: 2px; }

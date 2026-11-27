@@ -3159,7 +3159,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// דוח הבוקר: סעיף לכל סוכן. מה שעוד לא טופל חוזר בכל דוח, עם מספר הימים שהוא ממתין\n// נשלח כל יום, גם כשאין כלום (\"אין מה לדווח\"), כדי לדעת שהמערכת עובדת\nconst BASE = 'https://yonisaban.github.io/CartWise/';\nconst EDITOR = 'https://supabase.com/dashboard/project/myfvbmcmpdxtxubdraaq/editor';\nconst AGENTS = [\n  { key: 'community', name: 'מנהל קהילה', active: true },\n  { key: 'promos', name: 'מבצעים', active: false },\n  { key: 'product_match', name: 'התאמת מוצרים', active: false },\n  { key: 'catalog', name: 'הרחבת קטלוג', active: false },\n];\nconst data = $input.first().json;\nconst get = (url) => this.helpers.httpRequest({ url, json: true });\nconst [products, chains] = await Promise.all([\n  get(BASE + 'data/products.json?t=' + Date.now()),\n  get(BASE + 'data/chains.json?t=' + Date.now()),\n]);\nconst product = new Map(products.map((p) => [p.barcode, p]));\nconst chainName = new Map(chains.map((c) => [c.chain_id, c.name]));\nconst esc = (s) => String(s ?? '').replace(/[&<>\"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]));\nconst nis = (v) => (v == null ? '' : '₪ ' + Number(v).toFixed(2));\nconst ilDay = (d) => new Date(d).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });\nconst today = ilDay(Date.now());\nconst daysWaiting = (d) => Math.max(1, Math.round((new Date(today) - new Date(ilDay(d))) / 86400000));\nconst ADVICE = { approve: 'לאשר', reject: 'לדחות', check: 'לבדוק', merge: 'לאחד' };\nconst COLOR = { approve: '#ECFDF3', reject: '#FEF3F2', check: '#FFFAEB', merge: '#F2F4F7' };\nconst table = 'border=\"1\" cellpadding=\"6\" style=\"border-collapse:collapse;direction:rtl;font-size:14px\"';\nconst th = (cols) => `<tr style=\"background:#F2F4F7\">${cols.map((c) => `<th>${c}</th>`).join('')}</tr>`;\nconst byPriority = (a, b) => (b.detail?.priority ?? -1) - (a.detail?.priority ?? -1) || a.ref_id - b.ref_id;\n\nconst events = (data.events || []).filter((e) => !e.ref_table || e.detail);\nconst isNew = (e) => !e.reported_at;\nconst waitCell = (e) => (isNew(e) ? 'חדש' : `${daysWaiting(e.created_at)} ימים`);\n\nfunction reportsTable(list) {\n  const rows = list.sort(byPriority).map((e, i) => {\n    const d = e.detail;\n    const pct = d.official_price ? Math.round((1 - d.price / d.official_price) * 100) + '%' : '';\n    const dup = d.duplicate_of ? ` (כפול של ${d.duplicate_of})` : '';\n    return `<tr style=\"background:${COLOR[d.advice] || '#fff'}\"><td>${i + 1}</td><td>${e.ref_id}</td>`\n      + `<td>${esc(product.get(d.barcode)?.name || d.barcode)}</td><td>${esc(chainName.get(d.chain_id) || d.chain_id)}</td>`\n      + `<td>${nis(d.price)}</td><td>${nis(d.official_price)}</td><td>${pct}</td>`\n      + `<td><b>${ADVICE[d.advice] || 'לא נבדק'}</b>${dup}</td><td>${esc(d.reason)}</td><td>${d.priority ?? ''}</td><td>${waitCell(e)}</td></tr>`;\n  });\n  return `<table ${table}>${th([\"מס'\", 'מזהה', 'מוצר', 'רשת', 'מדווח', 'רשמי', 'הנחה', 'המלצה', 'נימוק', 'חשיבות', 'ממתין'])}${rows.join('')}</table>`;\n}\n\nfunction requestsTable(list) {\n  const rows = list.sort(byPriority).map((e, i) => {\n    const d = e.detail;\n    const dup = d.duplicate_of ? ` לבקשה ${d.duplicate_of}${d.duplicate_name ? ` \"${esc(d.duplicate_name)}\"` : ''}` : '';\n    return `<tr style=\"background:${COLOR[d.advice] || '#fff'}\"><td>${i + 1}</td><td>${e.ref_id}</td><td>${esc(d.name)}</td><td>${d.votes}</td>`\n      + `<td><b>${ADVICE[d.advice] || 'לא נבדק'}</b>${dup}</td><td>${esc(d.reason)}</td><td>${d.priority ?? ''}</td><td>${waitCell(e)}</td></tr>`;\n  });\n  return `<table ${table}>${th([\"מס'\", 'מזהה', 'בקשה', 'קולות', 'המלצה', 'נימוק', 'חשיבות', 'ממתין'])}${rows.join('')}</table>`;\n}\n\nfunction titlesList(list) {\n  return '<ol>' + list.map((e) => `<li>${esc(e.title)}${isNew(e) ? '' : ` <span style=\"color:#667085\">(ממתין ${daysWaiting(e.created_at)} ימים)</span>`}</li>`).join('') + '</ol>';\n}\n\nfunction block(list, render) {\n  const fresh = list.filter(isNew);\n  const old = list.filter((e) => !isNew(e));\n  let out = '';\n  if (fresh.length) out += `<p><b>חדש מאתמול (${fresh.length})</b></p>${render(fresh)}`;\n  if (old.length) out += `<p><b>עדיין ממתין מימים קודמים (${old.length})</b></p>${render(old)}`;\n  return out;\n}\n\nlet html = '<div dir=\"rtl\" style=\"font-family:Arial,sans-serif;color:#101828\">';\nhtml += `<p>בוקר טוב. זה מה שהסוכנים מצאו מאז הדוח הקודם. שום דבר לא משתנה באתר בלי האישור שלך.</p>`;\nlet total = 0;\nfor (const agent of AGENTS) {\n  const mine = events.filter((e) => e.agent === agent.key);\n  html += `<h3 style=\"margin-top:24px\">${esc(agent.name)}</h3>`;\n  if (!agent.active) { html += '<p style=\"color:#667085\">הסוכן עוד לא פעיל.</p>'; continue; }\n  total += mine.length;\n  let body = '';\n  if (agent.key === 'community') {\n    const reports = mine.filter((e) => e.ref_table === 'price_reports');\n    const requests = mine.filter((e) => e.ref_table === 'product_requests');\n    const other = mine.filter((e) => e.ref_table !== 'price_reports' && e.ref_table !== 'product_requests');\n    if (reports.length) body += `<h4>דיווחי \"מצאתי זול יותר\" (${reports.length})</h4>${block(reports, reportsTable)}`;\n    if (requests.length) body += `<h4>בקשות מוצרים (${requests.length})</h4>${block(requests, requestsTable)}`;\n    if (other.length) body += block(other, titlesList);\n    const notes = [];\n    if (data.unchecked_requests) notes.push(`${data.unchecked_requests} בקשות עוד לא נבדקו (Gemini לא ענה). הן ייבדקו מחר.`);\n    if (data.unchecked_reports) notes.push(`${data.unchecked_reports} דיווחים עוד לא נבדקו. הם ייבדקו מחר.`);\n    if (notes.length) body += `<p style=\"color:#B54708\">${notes.join('<br>')}</p>`;\n    if (reports.length || requests.length) {\n      body += `<p style=\"font-size:13px;color:#475467\">איך מאשרים: בעורך הטבלאות, בעמודה status, כותבים approved או rejected. לאיחוד בקשה כותבים merged, והקולות עוברים לבקשה שבהמלצה. `\n        + `<a href=\"${EDITOR}\">פתיחת עורך הטבלאות</a></p>`;\n    }\n  } else if (mine.length) {\n    body += block(mine, titlesList);\n  }\n  html += body || '<p>אין מה לדווח.</p>';\n}\nhtml += '</div>';\n\nconst [y, m, d] = today.split('-');\nreturn [{\n  json: {\n    subject: `סל חכם: דוח בוקר ${Number(d)}.${Number(m)}` + (total ? ` (${total} ממתינים)` : ''),\n    html,\n    ids: (data.events || []).map((e) => e.id),\n  },\n}];\n"
+        "jsCode": "// דוח הבוקר: סעיף לכל סוכן. מה שעוד לא טופל חוזר בכל דוח, עם מספר הימים שהוא ממתין\n// נשלח כל יום, גם כשאין כלום (\"אין מה לדווח\"), כדי לדעת שהמערכת עובדת\nconst BASE = 'https://yonisaban.github.io/CartWise/';\nconst EDITOR = 'https://supabase.com/dashboard/project/myfvbmcmpdxtxubdraaq/editor';\nconst AGENTS = [\n  { key: 'community', name: 'מנהל קהילה', active: true },\n  { key: 'promos', name: 'מבצעים', active: true },\n  { key: 'product_match', name: 'התאמת מוצרים', active: false },\n  { key: 'catalog', name: 'הרחבת קטלוג', active: false },\n];\nconst data = $input.first().json;\nconst get = (url) => this.helpers.httpRequest({ url, json: true });\nconst [products, chains] = await Promise.all([\n  get(BASE + 'data/products.json?t=' + Date.now()),\n  get(BASE + 'data/chains.json?t=' + Date.now()),\n]);\nconst product = new Map(products.map((p) => [p.barcode, p]));\nconst chainName = new Map(chains.map((c) => [c.chain_id, c.name]));\nconst esc = (s) => String(s ?? '').replace(/[&<>\"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]));\nconst nis = (v) => (v == null ? '' : '₪ ' + Number(v).toFixed(2));\nconst ilDay = (d) => new Date(d).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });\nconst today = ilDay(Date.now());\nconst daysWaiting = (d) => Math.max(1, Math.round((new Date(today) - new Date(ilDay(d))) / 86400000));\nconst ADVICE = { approve: 'לאשר', reject: 'לדחות', check: 'לבדוק', merge: 'לאחד' };\nconst COLOR = { approve: '#ECFDF3', reject: '#FEF3F2', check: '#FFFAEB', merge: '#F2F4F7' };\nconst table = 'border=\"1\" cellpadding=\"6\" style=\"border-collapse:collapse;direction:rtl;font-size:14px\"';\nconst th = (cols) => `<tr style=\"background:#F2F4F7\">${cols.map((c) => `<th>${c}</th>`).join('')}</tr>`;\nconst byPriority = (a, b) => (b.detail?.priority ?? -1) - (a.detail?.priority ?? -1) || a.ref_id - b.ref_id;\n\nconst events = (data.events || []).filter((e) => !e.ref_table || e.detail);\nconst isNew = (e) => !e.reported_at;\nconst waitCell = (e) => (isNew(e) ? 'חדש' : `${daysWaiting(e.created_at)} ימים`);\n\nfunction reportsTable(list) {\n  const rows = list.sort(byPriority).map((e, i) => {\n    const d = e.detail;\n    const pct = d.official_price ? Math.round((1 - d.price / d.official_price) * 100) + '%' : '';\n    const dup = d.duplicate_of ? ` (כפול של ${d.duplicate_of})` : '';\n    return `<tr style=\"background:${COLOR[d.advice] || '#fff'}\"><td>${i + 1}</td><td>${e.ref_id}</td>`\n      + `<td>${esc(product.get(d.barcode)?.name || d.barcode)}</td><td>${esc(chainName.get(d.chain_id) || d.chain_id)}</td>`\n      + `<td>${nis(d.price)}</td><td>${nis(d.official_price)}</td><td>${pct}</td>`\n      + `<td><b>${ADVICE[d.advice] || 'לא נבדק'}</b>${dup}</td><td>${esc(d.reason)}</td><td>${d.priority ?? ''}</td><td>${waitCell(e)}</td></tr>`;\n  });\n  return `<table ${table}>${th([\"מס'\", 'מזהה', 'מוצר', 'רשת', 'מדווח', 'רשמי', 'הנחה', 'המלצה', 'נימוק', 'חשיבות', 'ממתין'])}${rows.join('')}</table>`;\n}\n\nfunction requestsTable(list) {\n  const rows = list.sort(byPriority).map((e, i) => {\n    const d = e.detail;\n    const dup = d.duplicate_of ? ` לבקשה ${d.duplicate_of}${d.duplicate_name ? ` \"${esc(d.duplicate_name)}\"` : ''}` : '';\n    return `<tr style=\"background:${COLOR[d.advice] || '#fff'}\"><td>${i + 1}</td><td>${e.ref_id}</td><td>${esc(d.name)}</td><td>${d.votes}</td>`\n      + `<td><b>${ADVICE[d.advice] || 'לא נבדק'}</b>${dup}</td><td>${esc(d.reason)}</td><td>${d.priority ?? ''}</td><td>${waitCell(e)}</td></tr>`;\n  });\n  return `<table ${table}>${th([\"מס'\", 'מזהה', 'בקשה', 'קולות', 'המלצה', 'נימוק', 'חשיבות', 'ממתין'])}${rows.join('')}</table>`;\n}\n\n// סוכן המבצעים: טבלה לכל סניף שהמבצעים שלו נקראו, ורשימת מחירים חשודים שלא הוצגו\nconst SKIP = { coupon: 'קופון, אשראי או סכום קנייה', suspicious: 'מחיר חשוד', unknown: 'סוג לא מוכר או בלי מחיר מדף', weighted: 'מוצר במשקל' };\nfunction promosTable(list) {\n  const rows = list.map((e, i) => {\n    const d = e.detail;\n    const skipped = Object.entries(d.skipped || {}).filter(([, n]) => n > 0).map(([k, n]) => `${SKIP[k] || k}: ${n}`).join(', ');\n    return `<tr><td>${i + 1}</td><td>${esc(chainName.get(d.chain_id) || d.chain_id)}</td><td>${d.promos ?? 0}</td>`\n      + `<td>${d.new_promos ?? 0}</td><td>${d.club ?? 0}</td><td>${esc(skipped) || '-'}</td></tr>`;\n  });\n  return `<table ${table}>${th([\"מס'\", 'סניף', 'מבצעים בתוקף', 'חדשים', 'מועדון', 'לא הוצגו'])}${rows.join('')}</table>`;\n}\nfunction suspiciousTable(list) {\n  const rows = [];\n  for (const e of list) for (const s of e.detail.suspicious || []) {\n    rows.push(`<tr><td>${rows.length + 1}</td><td>${esc(chainName.get(e.detail.chain_id) || e.detail.chain_id)}</td>`\n      + `<td>${esc(product.get(s.barcode)?.name || s.item_code)}</td><td>${nis(s.shelf)}</td><td>${nis(s.promo)}</td><td>${esc(s.description)}</td></tr>`);\n  }\n  if (!rows.length) return '';\n  return `<p><b>מחירי מבצע חשודים, שלא הוצגו באתר (${rows.length})</b></p>`\n    + `<table ${table}>${th([\"מס'\", 'סניף', 'מוצר', 'מחיר מדף', 'מחיר מבצע ליחידה', 'תיאור'])}${rows.join('')}</table>`;\n}\n\nfunction titlesList(list) {\n  return '<ol>' + list.map((e) => `<li>${esc(e.title)}${isNew(e) ? '' : ` <span style=\"color:#667085\">(ממתין ${daysWaiting(e.created_at)} ימים)</span>`}</li>`).join('') + '</ol>';\n}\n\nfunction block(list, render) {\n  const fresh = list.filter(isNew);\n  const old = list.filter((e) => !isNew(e));\n  let out = '';\n  if (fresh.length) out += `<p><b>חדש מאתמול (${fresh.length})</b></p>${render(fresh)}`;\n  if (old.length) out += `<p><b>עדיין ממתין מימים קודמים (${old.length})</b></p>${render(old)}`;\n  return out;\n}\n\nlet html = '<div dir=\"rtl\" style=\"font-family:Arial,sans-serif;color:#101828\">';\nhtml += `<p>בוקר טוב. זה מה שהסוכנים מצאו מאז הדוח הקודם. שום דבר לא משתנה באתר בלי האישור שלך.</p>`;\nlet total = 0;\nfor (const agent of AGENTS) {\n  const mine = events.filter((e) => e.agent === agent.key);\n  html += `<h3 style=\"margin-top:24px\">${esc(agent.name)}</h3>`;\n  if (!agent.active) { html += '<p style=\"color:#667085\">הסוכן עוד לא פעיל.</p>'; continue; }\n  total += mine.filter((e) => e.kind === 'action').length;\n  let body = '';\n  if (agent.key === 'community') {\n    const reports = mine.filter((e) => e.ref_table === 'price_reports');\n    const requests = mine.filter((e) => e.ref_table === 'product_requests');\n    const other = mine.filter((e) => e.ref_table !== 'price_reports' && e.ref_table !== 'product_requests');\n    if (reports.length) body += `<h4>דיווחי \"מצאתי זול יותר\" (${reports.length})</h4>${block(reports, reportsTable)}`;\n    if (requests.length) body += `<h4>בקשות מוצרים (${requests.length})</h4>${block(requests, requestsTable)}`;\n    if (other.length) body += block(other, titlesList);\n    const notes = [];\n    if (data.unchecked_requests) notes.push(`${data.unchecked_requests} בקשות עוד לא נבדקו (Gemini לא ענה). הן ייבדקו מחר.`);\n    if (data.unchecked_reports) notes.push(`${data.unchecked_reports} דיווחים עוד לא נבדקו. הם ייבדקו מחר.`);\n    if (notes.length) body += `<p style=\"color:#B54708\">${notes.join('<br>')}</p>`;\n    if (reports.length || requests.length) {\n      body += `<p style=\"font-size:13px;color:#475467\">איך מאשרים: בעורך הטבלאות, בעמודה status, כותבים approved או rejected. לאיחוד בקשה כותבים merged, והקולות עוברים לבקשה שבהמלצה. `\n        + `<a href=\"${EDITOR}\">פתיחת עורך הטבלאות</a></p>`;\n    }\n  } else if (agent.key === 'promos') {\n    const runs = mine.filter((e) => e.ref_table === 'promo_runs' && e.kind === 'info' && e.detail.ok);\n    const failed = mine.filter((e) => e.kind === 'action');\n    const other = mine.filter((e) => !runs.includes(e) && !failed.includes(e));\n    if (failed.length) body += `<p style=\"color:#B42318\"><b>קובצי מבצעים שלא נקראו (${failed.length})</b></p>`\n      + block(failed, titlesList) + '<p style=\"font-size:13px;color:#475467\">באתר נשארים המבצעים הקודמים שעוד בתוקף. הקובץ ייקרא שוב בעדכון הבא.</p>';\n    if (runs.length) body += promosTable(runs) + suspiciousTable(runs);\n    if (other.length) body += block(other, titlesList);\n  } else if (mine.length) {\n    body += block(mine, titlesList);\n  }\n  html += body || '<p>אין מה לדווח.</p>';\n}\nhtml += '</div>';\n\nconst [y, m, d] = today.split('-');\nreturn [{\n  json: {\n    subject: `סל חכם: דוח בוקר ${Number(d)}.${Number(m)}` + (total ? ` (${total} ממתינים)` : ''),\n    html,\n    ids: (data.events || []).map((e) => e.id),\n  },\n}];\n"
       },
       "id": "agents10",
       "name": "סוכנים: דוח הבוקר",
@@ -3239,6 +3239,1732 @@
         4100
       ],
       "executeOnce": true
+    },
+    {
+      "id": "p901",
+      "name": "שופרסל: קובץ מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3080,
+        160
+      ],
+      "parameters": {
+        "jsCode": "// דף קובצי המבצעים של הסניף (catID=4). לא תלוי בענף המחירים\nconst html = await this.helpers.httpRequest({ url: 'https://prices.shufersal.co.il/FileObject/UpdateCategory?catID=4&storeId=1' });\nconst m = String(html).match(/https:\\/\\/pricesprodpublic[^\"]*PromoFull7290027600007-001-001-[^\"]*/);\nif (!m) throw new Error('לא נמצא קובץ PromoFull: שופרסל');\nreturn [{ json: { url: m[0].replace(/&amp;/g, '&') } }];"
+      },
+      "onError": "continueErrorOutput",
+      "executeOnce": true
+    },
+    {
+      "id": "p902",
+      "name": "שופרסל: הורדת מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3300,
+        160
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p903",
+      "name": "שופרסל: שם קובץ מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3520,
+        160
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nitem.binary.data.fileName = 'promofull.xml.gz';\nitem.binary.data.fileExtension = 'gz';\nitem.binary.data.mimeType = 'application/gzip';\nreturn [item];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p904",
+      "name": "שופרסל: פריסת מבצעים",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        3740,
+        160
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p905",
+      "name": "שופרסל: קריאת מבצעים",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        3960,
+        160
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_0",
+        "destinationKey": "data",
+        "options": {}
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p906",
+      "name": "שופרסל: כללי מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4180,
+        160
+      ],
+      "parameters": {
+        "jsCode": "// סוכן המבצעים: הכללים מ-n8n/promo-rules.js. כל מחיר משדה מספרי בקובץ, בלי Gemini\n// הכללים של סוכן המבצעים: קורא PromoFull ומחזיר מבצעים על מוצרי הקטלוג. נכנס כמו שהוא לצומת Code ב-n8n.\n// xml: הקובץ. catalog: Map item_code -> { barcode, kg }. shelf: Map item_code -> מחיר מדף. now: Date\nfunction parsePromos(xml, catalog, shelf, now) {\n  const SKIP_WORDS = /קופון|אשראי|תו זהב|למשלמים|אפליקציה|פיצוי|מתנה/;\n  const skipped = { coupon: 0, suspicious: 0, unknown: 0, weighted: 0 };\n  const suspicious = [];\n  const rows = [];\n  const tag = (s, t) => {\n    const r = s.match(new RegExp('<' + t + '>([\\\\s\\\\S]*?)</' + t + '>', 'i'));\n    return r ? r[1].trim() : '';\n  };\n  const num = (v) => (v === '' || v == null ? null : Number(v));\n  // תאריך ושעה: PromotionStartDateTime, או PromotionStartDate עם PromotionStartHour (וולט)\n  // השעות בקובץ הן שעון ישראל: +02:00 בחורף, +03:00 בקיץ\n  const israel = (local) => {\n    const guess = new Date(local + 'Z');\n    const shown = new Date(guess.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }) + ' UTC');\n    return new Date(guess.getTime() - (shown - guess));\n  };\n  const when = (s, side) => {\n    const full = tag(s, 'Promotion' + side + 'DateTime');\n    if (full) return israel(full.slice(0, 19));\n    const d = tag(s, 'Promotion' + side + 'Date');\n    if (!d) return null;\n    const h = tag(s, 'Promotion' + side + 'Hour') || (side === 'End' ? '23:59:59' : '00:00:00');\n    return israel(d + 'T' + h.slice(0, 8));\n  };\n  const seen = new Set();\n  const re = /<Promotion>([\\s\\S]*?)<\\/Promotion>/g;\n  let m;\n  while ((m = re.exec(xml))) {\n    const s = m[1];\n    const items = [...s.matchAll(/<PromotionItem>([\\s\\S]*?)<\\/PromotionItem>/g)].map((x) => x[1]);\n    const hits = items.filter((it) => catalog.has(tag(it, 'ItemCode')));\n    if (!hits.length) continue;\n    const start = when(s, 'Start');\n    const end = when(s, 'End');\n    if (end && end <= now) continue; // פג תוקף: לא נספר\n    const id = tag(s, 'PromotionID') || tag(s, 'PromotionId');\n    const description = tag(s, 'PromotionDescription').replace(/[‎‏‪-‮]/g, '').replace(/\\s+/g, ' ').trim().slice(0, 200);\n    const club = tag(s, 'ClubID') || tag(s, 'ClubId');\n    const clubOnly = !/^0(\\s|-|$)/.test(club);\n    const minAmount = num(tag(s, 'MinPurchaseAmount'));\n    const coupon = tag(s, 'AdditionalIsCoupon') === '1' || minAmount > 0 || SKIP_WORDS.test(description);\n    for (const it of hits) {\n      const code = tag(it, 'ItemCode');\n      if (seen.has(id + ':' + code)) continue;\n      seen.add(id + ':' + code);\n      if (coupon) { skipped.coupon++; continue; }\n      if (catalog.get(code).kg || (tag(it, 'bIsWeighted') || tag(it, 'blsWeighted')) === '1') { skipped.weighted++; continue; }\n      const rt = tag(it, 'RewardType');\n      const min = Math.max(1, num(tag(it, 'MinQty')) || 1);\n      const max = num(tag(it, 'MaxQty')) || null;\n      const price = num(tag(it, 'DiscountedPrice'));\n      const rate = num(tag(it, 'DiscountRate'));\n      let row = null;\n      // 3: מחיר ליחידה. 1 ו-10: המחיר ל-min יחידות. 2: אחוז הנחה על כל יחידה\n      if (rt === '3' && price > 0) row = { kind: 'unit', bundle_price: price, unitPrice: price };\n      else if ((rt === '1' || rt === '10') && price > 0 && min > 1) row = { kind: 'bundle', bundle_price: price, unitPrice: price / min };\n      else if ((rt === '1' || rt === '10') && price > 0) row = { kind: 'unit', bundle_price: price, unitPrice: price };\n      else if (rt === '2' && rate > 0 && rate < 100) row = { kind: 'percent', discount_rate: rate, unitPrice: null };\n      if (!row) { skipped.unknown++; continue; }\n      // מחיר חשוד: גבוה ממחיר המדף, או נמוך מ-20% ממנו\n      const sh = shelf.get(code);\n      const unit = row.kind === 'percent' ? sh * (1 - rate / 100) : row.unitPrice;\n      if (sh > 0 && (unit >= sh || unit < sh * 0.2)) {\n        skipped.suspicious++;\n        suspicious.push({ item_code: code, barcode: catalog.get(code).barcode, shelf: sh, promo: Math.round(unit * 100) / 100, description });\n        continue;\n      }\n      if (!(sh > 0)) { skipped.unknown++; continue; } // אין מחיר מדף להשוואה: לא מציגים\n      rows.push({\n        promo_id: id, item_code: code, description, kind: row.kind, min_qty: row.kind === 'percent' && rt === '2' ? 1 : min,\n        bundle_price: row.bundle_price ?? null, discount_rate: row.discount_rate ?? null, max_qty: max,\n        club_only: clubOnly, starts_at: start ? start.toISOString() : null, ends_at: end ? end.toISOString() : null,\n      });\n    }\n  }\n  return { rows, skipped, suspicious };\n}\n\n// ---------- הענף ----------\nconst CHAIN = 'shufersal';\nconst BASE = 'https://yonisaban.github.io/CartWise/';\nconst products = await this.helpers.httpRequest({ url: BASE + 'data/products.json?t=' + Date.now(), json: true });\n// מוצרי הקטלוג: הברקוד, וקודים פנימיים של מוצרים במשקל (שלא מקבלים מבצע)\nconst catalog = new Map();\nfor (const p of products) {\n  catalog.set(p.barcode, { barcode: p.barcode, kg: p.unit === 'kg' });\n  for (const c of Object.values(p.chain_codes || {})) catalog.set(c, { barcode: p.barcode, kg: true });\n}\n// מחירי המדף של הסניף מ-Supabase (קריאה ציבורית, עם המפתח הציבורי מ-js/config.js של האתר), להשוואה (מחיר חשוד)\nconst cfg = String(await this.helpers.httpRequest({ url: BASE + 'js/config.js?t=' + Date.now() }));\nconst SUPA = cfg.match(/SUPABASE_URL\\s*=\\s*\"([^\"]+)\"/)[1];\nconst KEY = cfg.match(/SUPABASE_PUBLISHABLE_KEY\\s*=\\s*\"([^\"]+)\"/)[1];\nconst codes = products.filter((p) => p.unit !== 'kg').map((p) => p.barcode);\nconst prices = await this.helpers.httpRequest({\n  url: SUPA + '/rest/v1/chain_items?select=item_code,price&chain_id=eq.' + CHAIN + '&item_code=in.(' + codes.join(',') + ')',\n  headers: { apikey: KEY }, json: true,\n});\nconst shelf = new Map(prices.map((r) => [r.item_code, Number(r.price)]));\nconst xml = $input.first().json.data;\nif (!/<Promotion>/i.test(xml || '')) throw new Error('בקובץ המבצעים אין רשומות Promotion');\nconst result = parsePromos(xml, catalog, shelf, new Date());\nconsole.log(CHAIN + ': מבצעים', result.rows.length, JSON.stringify(result.skipped));\nreturn [{ json: { payload: { chain_id: CHAIN, ...result } } }];\n"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p907",
+      "name": "שופרסל: שמירת מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4400,
+        160
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/rpc/replace_chain_promos",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p: $json.payload }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p908",
+      "name": "שופרסל: מבצעים נכשלו",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3740,
+        320
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/rpc/promo_failed",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_chain: 'shufersal', p_error: String($json.error?.message || $json.error || $json.message || 'שגיאה לא ידועה').slice(0, 300) }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p909",
+      "name": "וולט: קובץ מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3520,
+        460
+      ],
+      "parameters": {
+        "jsCode": "// דף התאריך האחרון, כמו בענף המחירים. לא תלוי בענף המחירים\nconst B = 'https://wm-gateway.wolt.com/isr-prices/public/v1/';\nconst index = String(await this.helpers.httpRequest({ url: B + 'index.html' }));\nconst day = (index.match(/href=\"(\\d{4}-\\d{2}-\\d{2}\\.html)\"/) || [])[1];\nif (!day) throw new Error('לא נמצא דף תאריך בוולט');\nconst html = String(await this.helpers.httpRequest({ url: B + day }));\nconst links = [...html.matchAll(/href=\"([^\"]*PromoFull7290058249350-000-025-[^\"]*)\"/g)].map((x) => x[1]).sort();\nif (!links.length) throw new Error('לא נמצא קובץ PromoFull לסניף 025 של וולט');\nreturn [{ json: { url: B + links[links.length - 1] } }];"
+      },
+      "onError": "continueErrorOutput",
+      "executeOnce": true
+    },
+    {
+      "id": "p910",
+      "name": "וולט: הורדת מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3740,
+        460
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p911",
+      "name": "וולט: שם קובץ מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3960,
+        460
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nitem.binary.data.fileName = 'promofull.xml.gz';\nitem.binary.data.fileExtension = 'gz';\nitem.binary.data.mimeType = 'application/gzip';\nreturn [item];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p912",
+      "name": "וולט: פריסת מבצעים",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        4180,
+        460
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p913",
+      "name": "וולט: קריאת מבצעים",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        4400,
+        460
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_0",
+        "destinationKey": "data",
+        "options": {}
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p914",
+      "name": "וולט: כללי מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4620,
+        460
+      ],
+      "parameters": {
+        "jsCode": "// סוכן המבצעים: הכללים מ-n8n/promo-rules.js. כל מחיר משדה מספרי בקובץ, בלי Gemini\n// הכללים של סוכן המבצעים: קורא PromoFull ומחזיר מבצעים על מוצרי הקטלוג. נכנס כמו שהוא לצומת Code ב-n8n.\n// xml: הקובץ. catalog: Map item_code -> { barcode, kg }. shelf: Map item_code -> מחיר מדף. now: Date\nfunction parsePromos(xml, catalog, shelf, now) {\n  const SKIP_WORDS = /קופון|אשראי|תו זהב|למשלמים|אפליקציה|פיצוי|מתנה/;\n  const skipped = { coupon: 0, suspicious: 0, unknown: 0, weighted: 0 };\n  const suspicious = [];\n  const rows = [];\n  const tag = (s, t) => {\n    const r = s.match(new RegExp('<' + t + '>([\\\\s\\\\S]*?)</' + t + '>', 'i'));\n    return r ? r[1].trim() : '';\n  };\n  const num = (v) => (v === '' || v == null ? null : Number(v));\n  // תאריך ושעה: PromotionStartDateTime, או PromotionStartDate עם PromotionStartHour (וולט)\n  // השעות בקובץ הן שעון ישראל: +02:00 בחורף, +03:00 בקיץ\n  const israel = (local) => {\n    const guess = new Date(local + 'Z');\n    const shown = new Date(guess.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }) + ' UTC');\n    return new Date(guess.getTime() - (shown - guess));\n  };\n  const when = (s, side) => {\n    const full = tag(s, 'Promotion' + side + 'DateTime');\n    if (full) return israel(full.slice(0, 19));\n    const d = tag(s, 'Promotion' + side + 'Date');\n    if (!d) return null;\n    const h = tag(s, 'Promotion' + side + 'Hour') || (side === 'End' ? '23:59:59' : '00:00:00');\n    return israel(d + 'T' + h.slice(0, 8));\n  };\n  const seen = new Set();\n  const re = /<Promotion>([\\s\\S]*?)<\\/Promotion>/g;\n  let m;\n  while ((m = re.exec(xml))) {\n    const s = m[1];\n    const items = [...s.matchAll(/<PromotionItem>([\\s\\S]*?)<\\/PromotionItem>/g)].map((x) => x[1]);\n    const hits = items.filter((it) => catalog.has(tag(it, 'ItemCode')));\n    if (!hits.length) continue;\n    const start = when(s, 'Start');\n    const end = when(s, 'End');\n    if (end && end <= now) continue; // פג תוקף: לא נספר\n    const id = tag(s, 'PromotionID') || tag(s, 'PromotionId');\n    const description = tag(s, 'PromotionDescription').replace(/[‎‏‪-‮]/g, '').replace(/\\s+/g, ' ').trim().slice(0, 200);\n    const club = tag(s, 'ClubID') || tag(s, 'ClubId');\n    const clubOnly = !/^0(\\s|-|$)/.test(club);\n    const minAmount = num(tag(s, 'MinPurchaseAmount'));\n    const coupon = tag(s, 'AdditionalIsCoupon') === '1' || minAmount > 0 || SKIP_WORDS.test(description);\n    for (const it of hits) {\n      const code = tag(it, 'ItemCode');\n      if (seen.has(id + ':' + code)) continue;\n      seen.add(id + ':' + code);\n      if (coupon) { skipped.coupon++; continue; }\n      if (catalog.get(code).kg || (tag(it, 'bIsWeighted') || tag(it, 'blsWeighted')) === '1') { skipped.weighted++; continue; }\n      const rt = tag(it, 'RewardType');\n      const min = Math.max(1, num(tag(it, 'MinQty')) || 1);\n      const max = num(tag(it, 'MaxQty')) || null;\n      const price = num(tag(it, 'DiscountedPrice'));\n      const rate = num(tag(it, 'DiscountRate'));\n      let row = null;\n      // 3: מחיר ליחידה. 1 ו-10: המחיר ל-min יחידות. 2: אחוז הנחה על כל יחידה\n      if (rt === '3' && price > 0) row = { kind: 'unit', bundle_price: price, unitPrice: price };\n      else if ((rt === '1' || rt === '10') && price > 0 && min > 1) row = { kind: 'bundle', bundle_price: price, unitPrice: price / min };\n      else if ((rt === '1' || rt === '10') && price > 0) row = { kind: 'unit', bundle_price: price, unitPrice: price };\n      else if (rt === '2' && rate > 0 && rate < 100) row = { kind: 'percent', discount_rate: rate, unitPrice: null };\n      if (!row) { skipped.unknown++; continue; }\n      // מחיר חשוד: גבוה ממחיר המדף, או נמוך מ-20% ממנו\n      const sh = shelf.get(code);\n      const unit = row.kind === 'percent' ? sh * (1 - rate / 100) : row.unitPrice;\n      if (sh > 0 && (unit >= sh || unit < sh * 0.2)) {\n        skipped.suspicious++;\n        suspicious.push({ item_code: code, barcode: catalog.get(code).barcode, shelf: sh, promo: Math.round(unit * 100) / 100, description });\n        continue;\n      }\n      if (!(sh > 0)) { skipped.unknown++; continue; } // אין מחיר מדף להשוואה: לא מציגים\n      rows.push({\n        promo_id: id, item_code: code, description, kind: row.kind, min_qty: row.kind === 'percent' && rt === '2' ? 1 : min,\n        bundle_price: row.bundle_price ?? null, discount_rate: row.discount_rate ?? null, max_qty: max,\n        club_only: clubOnly, starts_at: start ? start.toISOString() : null, ends_at: end ? end.toISOString() : null,\n      });\n    }\n  }\n  return { rows, skipped, suspicious };\n}\n\n// ---------- הענף ----------\nconst CHAIN = 'wolt';\nconst BASE = 'https://yonisaban.github.io/CartWise/';\nconst products = await this.helpers.httpRequest({ url: BASE + 'data/products.json?t=' + Date.now(), json: true });\n// מוצרי הקטלוג: הברקוד, וקודים פנימיים של מוצרים במשקל (שלא מקבלים מבצע)\nconst catalog = new Map();\nfor (const p of products) {\n  catalog.set(p.barcode, { barcode: p.barcode, kg: p.unit === 'kg' });\n  for (const c of Object.values(p.chain_codes || {})) catalog.set(c, { barcode: p.barcode, kg: true });\n}\n// מחירי המדף של הסניף מ-Supabase (קריאה ציבורית, עם המפתח הציבורי מ-js/config.js של האתר), להשוואה (מחיר חשוד)\nconst cfg = String(await this.helpers.httpRequest({ url: BASE + 'js/config.js?t=' + Date.now() }));\nconst SUPA = cfg.match(/SUPABASE_URL\\s*=\\s*\"([^\"]+)\"/)[1];\nconst KEY = cfg.match(/SUPABASE_PUBLISHABLE_KEY\\s*=\\s*\"([^\"]+)\"/)[1];\nconst codes = products.filter((p) => p.unit !== 'kg').map((p) => p.barcode);\nconst prices = await this.helpers.httpRequest({\n  url: SUPA + '/rest/v1/chain_items?select=item_code,price&chain_id=eq.' + CHAIN + '&item_code=in.(' + codes.join(',') + ')',\n  headers: { apikey: KEY }, json: true,\n});\nconst shelf = new Map(prices.map((r) => [r.item_code, Number(r.price)]));\nconst xml = $input.first().json.data;\nif (!/<Promotion>/i.test(xml || '')) throw new Error('בקובץ המבצעים אין רשומות Promotion');\nconst result = parsePromos(xml, catalog, shelf, new Date());\nconsole.log(CHAIN + ': מבצעים', result.rows.length, JSON.stringify(result.skipped));\nreturn [{ json: { payload: { chain_id: CHAIN, ...result } } }];\n"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p915",
+      "name": "וולט: שמירת מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4840,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/rpc/replace_chain_promos",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p: $json.payload }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p916",
+      "name": "וולט: מבצעים נכשלו",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4180,
+        620
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/rpc/promo_failed",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_chain: 'wolt', p_error: String($json.error?.message || $json.error || $json.message || 'שגיאה לא ידועה').slice(0, 300) }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p917",
+      "name": "טיב טעם: חיפוש מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4400,
+        760
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://url.publishedprices.co.il/file/json/dir",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $('טיב טעם: אסימון קבצים').first().json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "sSearch",
+              "value": "PromoFull7290873255550-"
+            },
+            {
+              "name": "iDisplayLength",
+              "value": "100000"
+            },
+            {
+              "name": "csrftoken",
+              "value": "={{ $('טיב טעם: אסימון קבצים').first().json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "executeOnce": true,
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p918",
+      "name": "טיב טעם: קובץ מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4620,
+        760
+      ],
+      "parameters": {
+        "jsCode": "// שמות הקבצים ב-Cerberus לפעמים באותיות קטנות, ולכן בלי תלות ברישיות\nconst list = ($input.first().json.aaData || []).map((f) => f.fname).filter((n) => /^promofull7290873255550-\\d{3}-019-/i.test(n)).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));\nif (!list.length) throw new Error('לא נמצא קובץ PromoFull ב-Cerberus: טיב טעם');\nreturn [{ json: { url: 'https://url.publishedprices.co.il/file/d/' + list[list.length - 1], cookie: $('טיב טעם: אסימון קבצים').first().json.cookie } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p919",
+      "name": "טיב טעם: הורדת מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4840,
+        760
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p920",
+      "name": "טיב טעם: שם קובץ מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5060,
+        760
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nitem.binary.data.fileName = 'promofull.xml.gz';\nitem.binary.data.fileExtension = 'gz';\nitem.binary.data.mimeType = 'application/gzip';\nreturn [item];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p921",
+      "name": "טיב טעם: פריסת מבצעים",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        5280,
+        760
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p922",
+      "name": "טיב טעם: קריאת מבצעים",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        5500,
+        760
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_0",
+        "destinationKey": "data",
+        "options": {}
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p923",
+      "name": "טיב טעם: כללי מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5720,
+        760
+      ],
+      "parameters": {
+        "jsCode": "// סוכן המבצעים: הכללים מ-n8n/promo-rules.js. כל מחיר משדה מספרי בקובץ, בלי Gemini\n// הכללים של סוכן המבצעים: קורא PromoFull ומחזיר מבצעים על מוצרי הקטלוג. נכנס כמו שהוא לצומת Code ב-n8n.\n// xml: הקובץ. catalog: Map item_code -> { barcode, kg }. shelf: Map item_code -> מחיר מדף. now: Date\nfunction parsePromos(xml, catalog, shelf, now) {\n  const SKIP_WORDS = /קופון|אשראי|תו זהב|למשלמים|אפליקציה|פיצוי|מתנה/;\n  const skipped = { coupon: 0, suspicious: 0, unknown: 0, weighted: 0 };\n  const suspicious = [];\n  const rows = [];\n  const tag = (s, t) => {\n    const r = s.match(new RegExp('<' + t + '>([\\\\s\\\\S]*?)</' + t + '>', 'i'));\n    return r ? r[1].trim() : '';\n  };\n  const num = (v) => (v === '' || v == null ? null : Number(v));\n  // תאריך ושעה: PromotionStartDateTime, או PromotionStartDate עם PromotionStartHour (וולט)\n  // השעות בקובץ הן שעון ישראל: +02:00 בחורף, +03:00 בקיץ\n  const israel = (local) => {\n    const guess = new Date(local + 'Z');\n    const shown = new Date(guess.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }) + ' UTC');\n    return new Date(guess.getTime() - (shown - guess));\n  };\n  const when = (s, side) => {\n    const full = tag(s, 'Promotion' + side + 'DateTime');\n    if (full) return israel(full.slice(0, 19));\n    const d = tag(s, 'Promotion' + side + 'Date');\n    if (!d) return null;\n    const h = tag(s, 'Promotion' + side + 'Hour') || (side === 'End' ? '23:59:59' : '00:00:00');\n    return israel(d + 'T' + h.slice(0, 8));\n  };\n  const seen = new Set();\n  const re = /<Promotion>([\\s\\S]*?)<\\/Promotion>/g;\n  let m;\n  while ((m = re.exec(xml))) {\n    const s = m[1];\n    const items = [...s.matchAll(/<PromotionItem>([\\s\\S]*?)<\\/PromotionItem>/g)].map((x) => x[1]);\n    const hits = items.filter((it) => catalog.has(tag(it, 'ItemCode')));\n    if (!hits.length) continue;\n    const start = when(s, 'Start');\n    const end = when(s, 'End');\n    if (end && end <= now) continue; // פג תוקף: לא נספר\n    const id = tag(s, 'PromotionID') || tag(s, 'PromotionId');\n    const description = tag(s, 'PromotionDescription').replace(/[‎‏‪-‮]/g, '').replace(/\\s+/g, ' ').trim().slice(0, 200);\n    const club = tag(s, 'ClubID') || tag(s, 'ClubId');\n    const clubOnly = !/^0(\\s|-|$)/.test(club);\n    const minAmount = num(tag(s, 'MinPurchaseAmount'));\n    const coupon = tag(s, 'AdditionalIsCoupon') === '1' || minAmount > 0 || SKIP_WORDS.test(description);\n    for (const it of hits) {\n      const code = tag(it, 'ItemCode');\n      if (seen.has(id + ':' + code)) continue;\n      seen.add(id + ':' + code);\n      if (coupon) { skipped.coupon++; continue; }\n      if (catalog.get(code).kg || (tag(it, 'bIsWeighted') || tag(it, 'blsWeighted')) === '1') { skipped.weighted++; continue; }\n      const rt = tag(it, 'RewardType');\n      const min = Math.max(1, num(tag(it, 'MinQty')) || 1);\n      const max = num(tag(it, 'MaxQty')) || null;\n      const price = num(tag(it, 'DiscountedPrice'));\n      const rate = num(tag(it, 'DiscountRate'));\n      let row = null;\n      // 3: מחיר ליחידה. 1 ו-10: המחיר ל-min יחידות. 2: אחוז הנחה על כל יחידה\n      if (rt === '3' && price > 0) row = { kind: 'unit', bundle_price: price, unitPrice: price };\n      else if ((rt === '1' || rt === '10') && price > 0 && min > 1) row = { kind: 'bundle', bundle_price: price, unitPrice: price / min };\n      else if ((rt === '1' || rt === '10') && price > 0) row = { kind: 'unit', bundle_price: price, unitPrice: price };\n      else if (rt === '2' && rate > 0 && rate < 100) row = { kind: 'percent', discount_rate: rate, unitPrice: null };\n      if (!row) { skipped.unknown++; continue; }\n      // מחיר חשוד: גבוה ממחיר המדף, או נמוך מ-20% ממנו\n      const sh = shelf.get(code);\n      const unit = row.kind === 'percent' ? sh * (1 - rate / 100) : row.unitPrice;\n      if (sh > 0 && (unit >= sh || unit < sh * 0.2)) {\n        skipped.suspicious++;\n        suspicious.push({ item_code: code, barcode: catalog.get(code).barcode, shelf: sh, promo: Math.round(unit * 100) / 100, description });\n        continue;\n      }\n      if (!(sh > 0)) { skipped.unknown++; continue; } // אין מחיר מדף להשוואה: לא מציגים\n      rows.push({\n        promo_id: id, item_code: code, description, kind: row.kind, min_qty: row.kind === 'percent' && rt === '2' ? 1 : min,\n        bundle_price: row.bundle_price ?? null, discount_rate: row.discount_rate ?? null, max_qty: max,\n        club_only: clubOnly, starts_at: start ? start.toISOString() : null, ends_at: end ? end.toISOString() : null,\n      });\n    }\n  }\n  return { rows, skipped, suspicious };\n}\n\n// ---------- הענף ----------\nconst CHAIN = 'tiv_taam';\nconst BASE = 'https://yonisaban.github.io/CartWise/';\nconst products = await this.helpers.httpRequest({ url: BASE + 'data/products.json?t=' + Date.now(), json: true });\n// מוצרי הקטלוג: הברקוד, וקודים פנימיים של מוצרים במשקל (שלא מקבלים מבצע)\nconst catalog = new Map();\nfor (const p of products) {\n  catalog.set(p.barcode, { barcode: p.barcode, kg: p.unit === 'kg' });\n  for (const c of Object.values(p.chain_codes || {})) catalog.set(c, { barcode: p.barcode, kg: true });\n}\n// מחירי המדף של הסניף מ-Supabase (קריאה ציבורית, עם המפתח הציבורי מ-js/config.js של האתר), להשוואה (מחיר חשוד)\nconst cfg = String(await this.helpers.httpRequest({ url: BASE + 'js/config.js?t=' + Date.now() }));\nconst SUPA = cfg.match(/SUPABASE_URL\\s*=\\s*\"([^\"]+)\"/)[1];\nconst KEY = cfg.match(/SUPABASE_PUBLISHABLE_KEY\\s*=\\s*\"([^\"]+)\"/)[1];\nconst codes = products.filter((p) => p.unit !== 'kg').map((p) => p.barcode);\nconst prices = await this.helpers.httpRequest({\n  url: SUPA + '/rest/v1/chain_items?select=item_code,price&chain_id=eq.' + CHAIN + '&item_code=in.(' + codes.join(',') + ')',\n  headers: { apikey: KEY }, json: true,\n});\nconst shelf = new Map(prices.map((r) => [r.item_code, Number(r.price)]));\nconst xml = $input.first().json.data;\nif (!/<Promotion>/i.test(xml || '')) throw new Error('בקובץ המבצעים אין רשומות Promotion');\nconst result = parsePromos(xml, catalog, shelf, new Date());\nconsole.log(CHAIN + ': מבצעים', result.rows.length, JSON.stringify(result.skipped));\nreturn [{ json: { payload: { chain_id: CHAIN, ...result } } }];\n"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p924",
+      "name": "טיב טעם: שמירת מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5940,
+        760
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/rpc/replace_chain_promos",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p: $json.payload }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p925",
+      "name": "טיב טעם: מבצעים נכשלו",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5060,
+        920
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/rpc/promo_failed",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_chain: 'tiv_taam', p_error: String($json.error?.message || $json.error || $json.message || 'שגיאה לא ידועה').slice(0, 300) }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p926",
+      "name": "רמי לוי: חיפוש מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4400,
+        1260
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://url.publishedprices.co.il/file/json/dir",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $('רמי לוי: אסימון קבצים').first().json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "sSearch",
+              "value": "PromoFull7290058140886-"
+            },
+            {
+              "name": "iDisplayLength",
+              "value": "100000"
+            },
+            {
+              "name": "csrftoken",
+              "value": "={{ $('רמי לוי: אסימון קבצים').first().json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "executeOnce": true,
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p927",
+      "name": "רמי לוי: קובץ מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4620,
+        1260
+      ],
+      "parameters": {
+        "jsCode": "// שמות הקבצים ב-Cerberus לפעמים באותיות קטנות, ולכן בלי תלות ברישיות\nconst list = ($input.first().json.aaData || []).map((f) => f.fname).filter((n) => /^promofull7290058140886-\\d{3}-733-/i.test(n)).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));\nif (!list.length) throw new Error('לא נמצא קובץ PromoFull ב-Cerberus: רמי לוי');\nreturn [{ json: { url: 'https://url.publishedprices.co.il/file/d/' + list[list.length - 1], cookie: $('רמי לוי: אסימון קבצים').first().json.cookie } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p928",
+      "name": "רמי לוי: הורדת מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4840,
+        1260
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p929",
+      "name": "רמי לוי: שם קובץ מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5060,
+        1260
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nitem.binary.data.fileName = 'promofull.xml.gz';\nitem.binary.data.fileExtension = 'gz';\nitem.binary.data.mimeType = 'application/gzip';\nreturn [item];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p930",
+      "name": "רמי לוי: פריסת מבצעים",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        5280,
+        1260
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p931",
+      "name": "רמי לוי: קריאת מבצעים",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        5500,
+        1260
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_0",
+        "destinationKey": "data",
+        "options": {}
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p932",
+      "name": "רמי לוי: כללי מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5720,
+        1260
+      ],
+      "parameters": {
+        "jsCode": "// סוכן המבצעים: הכללים מ-n8n/promo-rules.js. כל מחיר משדה מספרי בקובץ, בלי Gemini\n// הכללים של סוכן המבצעים: קורא PromoFull ומחזיר מבצעים על מוצרי הקטלוג. נכנס כמו שהוא לצומת Code ב-n8n.\n// xml: הקובץ. catalog: Map item_code -> { barcode, kg }. shelf: Map item_code -> מחיר מדף. now: Date\nfunction parsePromos(xml, catalog, shelf, now) {\n  const SKIP_WORDS = /קופון|אשראי|תו זהב|למשלמים|אפליקציה|פיצוי|מתנה/;\n  const skipped = { coupon: 0, suspicious: 0, unknown: 0, weighted: 0 };\n  const suspicious = [];\n  const rows = [];\n  const tag = (s, t) => {\n    const r = s.match(new RegExp('<' + t + '>([\\\\s\\\\S]*?)</' + t + '>', 'i'));\n    return r ? r[1].trim() : '';\n  };\n  const num = (v) => (v === '' || v == null ? null : Number(v));\n  // תאריך ושעה: PromotionStartDateTime, או PromotionStartDate עם PromotionStartHour (וולט)\n  // השעות בקובץ הן שעון ישראל: +02:00 בחורף, +03:00 בקיץ\n  const israel = (local) => {\n    const guess = new Date(local + 'Z');\n    const shown = new Date(guess.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }) + ' UTC');\n    return new Date(guess.getTime() - (shown - guess));\n  };\n  const when = (s, side) => {\n    const full = tag(s, 'Promotion' + side + 'DateTime');\n    if (full) return israel(full.slice(0, 19));\n    const d = tag(s, 'Promotion' + side + 'Date');\n    if (!d) return null;\n    const h = tag(s, 'Promotion' + side + 'Hour') || (side === 'End' ? '23:59:59' : '00:00:00');\n    return israel(d + 'T' + h.slice(0, 8));\n  };\n  const seen = new Set();\n  const re = /<Promotion>([\\s\\S]*?)<\\/Promotion>/g;\n  let m;\n  while ((m = re.exec(xml))) {\n    const s = m[1];\n    const items = [...s.matchAll(/<PromotionItem>([\\s\\S]*?)<\\/PromotionItem>/g)].map((x) => x[1]);\n    const hits = items.filter((it) => catalog.has(tag(it, 'ItemCode')));\n    if (!hits.length) continue;\n    const start = when(s, 'Start');\n    const end = when(s, 'End');\n    if (end && end <= now) continue; // פג תוקף: לא נספר\n    const id = tag(s, 'PromotionID') || tag(s, 'PromotionId');\n    const description = tag(s, 'PromotionDescription').replace(/[‎‏‪-‮]/g, '').replace(/\\s+/g, ' ').trim().slice(0, 200);\n    const club = tag(s, 'ClubID') || tag(s, 'ClubId');\n    const clubOnly = !/^0(\\s|-|$)/.test(club);\n    const minAmount = num(tag(s, 'MinPurchaseAmount'));\n    const coupon = tag(s, 'AdditionalIsCoupon') === '1' || minAmount > 0 || SKIP_WORDS.test(description);\n    for (const it of hits) {\n      const code = tag(it, 'ItemCode');\n      if (seen.has(id + ':' + code)) continue;\n      seen.add(id + ':' + code);\n      if (coupon) { skipped.coupon++; continue; }\n      if (catalog.get(code).kg || (tag(it, 'bIsWeighted') || tag(it, 'blsWeighted')) === '1') { skipped.weighted++; continue; }\n      const rt = tag(it, 'RewardType');\n      const min = Math.max(1, num(tag(it, 'MinQty')) || 1);\n      const max = num(tag(it, 'MaxQty')) || null;\n      const price = num(tag(it, 'DiscountedPrice'));\n      const rate = num(tag(it, 'DiscountRate'));\n      let row = null;\n      // 3: מחיר ליחידה. 1 ו-10: המחיר ל-min יחידות. 2: אחוז הנחה על כל יחידה\n      if (rt === '3' && price > 0) row = { kind: 'unit', bundle_price: price, unitPrice: price };\n      else if ((rt === '1' || rt === '10') && price > 0 && min > 1) row = { kind: 'bundle', bundle_price: price, unitPrice: price / min };\n      else if ((rt === '1' || rt === '10') && price > 0) row = { kind: 'unit', bundle_price: price, unitPrice: price };\n      else if (rt === '2' && rate > 0 && rate < 100) row = { kind: 'percent', discount_rate: rate, unitPrice: null };\n      if (!row) { skipped.unknown++; continue; }\n      // מחיר חשוד: גבוה ממחיר המדף, או נמוך מ-20% ממנו\n      const sh = shelf.get(code);\n      const unit = row.kind === 'percent' ? sh * (1 - rate / 100) : row.unitPrice;\n      if (sh > 0 && (unit >= sh || unit < sh * 0.2)) {\n        skipped.suspicious++;\n        suspicious.push({ item_code: code, barcode: catalog.get(code).barcode, shelf: sh, promo: Math.round(unit * 100) / 100, description });\n        continue;\n      }\n      if (!(sh > 0)) { skipped.unknown++; continue; } // אין מחיר מדף להשוואה: לא מציגים\n      rows.push({\n        promo_id: id, item_code: code, description, kind: row.kind, min_qty: row.kind === 'percent' && rt === '2' ? 1 : min,\n        bundle_price: row.bundle_price ?? null, discount_rate: row.discount_rate ?? null, max_qty: max,\n        club_only: clubOnly, starts_at: start ? start.toISOString() : null, ends_at: end ? end.toISOString() : null,\n      });\n    }\n  }\n  return { rows, skipped, suspicious };\n}\n\n// ---------- הענף ----------\nconst CHAIN = 'rami_levi';\nconst BASE = 'https://yonisaban.github.io/CartWise/';\nconst products = await this.helpers.httpRequest({ url: BASE + 'data/products.json?t=' + Date.now(), json: true });\n// מוצרי הקטלוג: הברקוד, וקודים פנימיים של מוצרים במשקל (שלא מקבלים מבצע)\nconst catalog = new Map();\nfor (const p of products) {\n  catalog.set(p.barcode, { barcode: p.barcode, kg: p.unit === 'kg' });\n  for (const c of Object.values(p.chain_codes || {})) catalog.set(c, { barcode: p.barcode, kg: true });\n}\n// מחירי המדף של הסניף מ-Supabase (קריאה ציבורית, עם המפתח הציבורי מ-js/config.js של האתר), להשוואה (מחיר חשוד)\nconst cfg = String(await this.helpers.httpRequest({ url: BASE + 'js/config.js?t=' + Date.now() }));\nconst SUPA = cfg.match(/SUPABASE_URL\\s*=\\s*\"([^\"]+)\"/)[1];\nconst KEY = cfg.match(/SUPABASE_PUBLISHABLE_KEY\\s*=\\s*\"([^\"]+)\"/)[1];\nconst codes = products.filter((p) => p.unit !== 'kg').map((p) => p.barcode);\nconst prices = await this.helpers.httpRequest({\n  url: SUPA + '/rest/v1/chain_items?select=item_code,price&chain_id=eq.' + CHAIN + '&item_code=in.(' + codes.join(',') + ')',\n  headers: { apikey: KEY }, json: true,\n});\nconst shelf = new Map(prices.map((r) => [r.item_code, Number(r.price)]));\nconst xml = $input.first().json.data;\nif (!/<Promotion>/i.test(xml || '')) throw new Error('בקובץ המבצעים אין רשומות Promotion');\nconst result = parsePromos(xml, catalog, shelf, new Date());\nconsole.log(CHAIN + ': מבצעים', result.rows.length, JSON.stringify(result.skipped));\nreturn [{ json: { payload: { chain_id: CHAIN, ...result } } }];\n"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p933",
+      "name": "רמי לוי: שמירת מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5940,
+        1260
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/rpc/replace_chain_promos",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p: $json.payload }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p934",
+      "name": "רמי לוי: מבצעים נכשלו",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5060,
+        1420
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/rpc/promo_failed",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_chain: 'rami_levi', p_error: String($json.error?.message || $json.error || $json.message || 'שגיאה לא ידועה').slice(0, 300) }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p935",
+      "name": "AM:PM: חיפוש מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4400,
+        1660
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://url.publishedprices.co.il/file/json/dir",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $('AM:PM: אסימון קבצים').first().json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "sSearch",
+              "value": "PromoFull7290492000005-"
+            },
+            {
+              "name": "iDisplayLength",
+              "value": "100000"
+            },
+            {
+              "name": "csrftoken",
+              "value": "={{ $('AM:PM: אסימון קבצים').first().json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "executeOnce": true,
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p936",
+      "name": "AM:PM: קובץ מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4620,
+        1660
+      ],
+      "parameters": {
+        "jsCode": "// שמות הקבצים ב-Cerberus לפעמים באותיות קטנות, ולכן בלי תלות ברישיות\nconst list = ($input.first().json.aaData || []).map((f) => f.fname).filter((n) => /^promofull7290492000005-\\d{3}-524-/i.test(n)).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));\nif (!list.length) throw new Error('לא נמצא קובץ PromoFull ב-Cerberus: AM:PM');\nreturn [{ json: { url: 'https://url.publishedprices.co.il/file/d/' + list[list.length - 1], cookie: $('AM:PM: אסימון קבצים').first().json.cookie } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p937",
+      "name": "AM:PM: הורדת מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4840,
+        1660
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p938",
+      "name": "AM:PM: שם קובץ מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5060,
+        1660
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nitem.binary.data.fileName = 'promofull.xml.gz';\nitem.binary.data.fileExtension = 'gz';\nitem.binary.data.mimeType = 'application/gzip';\nreturn [item];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p939",
+      "name": "AM:PM: פריסת מבצעים",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        5280,
+        1660
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p940",
+      "name": "AM:PM: קריאת מבצעים",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        5500,
+        1660
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_0",
+        "destinationKey": "data",
+        "options": {}
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p941",
+      "name": "AM:PM: כללי מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5720,
+        1660
+      ],
+      "parameters": {
+        "jsCode": "// סוכן המבצעים: הכללים מ-n8n/promo-rules.js. כל מחיר משדה מספרי בקובץ, בלי Gemini\n// הכללים של סוכן המבצעים: קורא PromoFull ומחזיר מבצעים על מוצרי הקטלוג. נכנס כמו שהוא לצומת Code ב-n8n.\n// xml: הקובץ. catalog: Map item_code -> { barcode, kg }. shelf: Map item_code -> מחיר מדף. now: Date\nfunction parsePromos(xml, catalog, shelf, now) {\n  const SKIP_WORDS = /קופון|אשראי|תו זהב|למשלמים|אפליקציה|פיצוי|מתנה/;\n  const skipped = { coupon: 0, suspicious: 0, unknown: 0, weighted: 0 };\n  const suspicious = [];\n  const rows = [];\n  const tag = (s, t) => {\n    const r = s.match(new RegExp('<' + t + '>([\\\\s\\\\S]*?)</' + t + '>', 'i'));\n    return r ? r[1].trim() : '';\n  };\n  const num = (v) => (v === '' || v == null ? null : Number(v));\n  // תאריך ושעה: PromotionStartDateTime, או PromotionStartDate עם PromotionStartHour (וולט)\n  // השעות בקובץ הן שעון ישראל: +02:00 בחורף, +03:00 בקיץ\n  const israel = (local) => {\n    const guess = new Date(local + 'Z');\n    const shown = new Date(guess.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }) + ' UTC');\n    return new Date(guess.getTime() - (shown - guess));\n  };\n  const when = (s, side) => {\n    const full = tag(s, 'Promotion' + side + 'DateTime');\n    if (full) return israel(full.slice(0, 19));\n    const d = tag(s, 'Promotion' + side + 'Date');\n    if (!d) return null;\n    const h = tag(s, 'Promotion' + side + 'Hour') || (side === 'End' ? '23:59:59' : '00:00:00');\n    return israel(d + 'T' + h.slice(0, 8));\n  };\n  const seen = new Set();\n  const re = /<Promotion>([\\s\\S]*?)<\\/Promotion>/g;\n  let m;\n  while ((m = re.exec(xml))) {\n    const s = m[1];\n    const items = [...s.matchAll(/<PromotionItem>([\\s\\S]*?)<\\/PromotionItem>/g)].map((x) => x[1]);\n    const hits = items.filter((it) => catalog.has(tag(it, 'ItemCode')));\n    if (!hits.length) continue;\n    const start = when(s, 'Start');\n    const end = when(s, 'End');\n    if (end && end <= now) continue; // פג תוקף: לא נספר\n    const id = tag(s, 'PromotionID') || tag(s, 'PromotionId');\n    const description = tag(s, 'PromotionDescription').replace(/[‎‏‪-‮]/g, '').replace(/\\s+/g, ' ').trim().slice(0, 200);\n    const club = tag(s, 'ClubID') || tag(s, 'ClubId');\n    const clubOnly = !/^0(\\s|-|$)/.test(club);\n    const minAmount = num(tag(s, 'MinPurchaseAmount'));\n    const coupon = tag(s, 'AdditionalIsCoupon') === '1' || minAmount > 0 || SKIP_WORDS.test(description);\n    for (const it of hits) {\n      const code = tag(it, 'ItemCode');\n      if (seen.has(id + ':' + code)) continue;\n      seen.add(id + ':' + code);\n      if (coupon) { skipped.coupon++; continue; }\n      if (catalog.get(code).kg || (tag(it, 'bIsWeighted') || tag(it, 'blsWeighted')) === '1') { skipped.weighted++; continue; }\n      const rt = tag(it, 'RewardType');\n      const min = Math.max(1, num(tag(it, 'MinQty')) || 1);\n      const max = num(tag(it, 'MaxQty')) || null;\n      const price = num(tag(it, 'DiscountedPrice'));\n      const rate = num(tag(it, 'DiscountRate'));\n      let row = null;\n      // 3: מחיר ליחידה. 1 ו-10: המחיר ל-min יחידות. 2: אחוז הנחה על כל יחידה\n      if (rt === '3' && price > 0) row = { kind: 'unit', bundle_price: price, unitPrice: price };\n      else if ((rt === '1' || rt === '10') && price > 0 && min > 1) row = { kind: 'bundle', bundle_price: price, unitPrice: price / min };\n      else if ((rt === '1' || rt === '10') && price > 0) row = { kind: 'unit', bundle_price: price, unitPrice: price };\n      else if (rt === '2' && rate > 0 && rate < 100) row = { kind: 'percent', discount_rate: rate, unitPrice: null };\n      if (!row) { skipped.unknown++; continue; }\n      // מחיר חשוד: גבוה ממחיר המדף, או נמוך מ-20% ממנו\n      const sh = shelf.get(code);\n      const unit = row.kind === 'percent' ? sh * (1 - rate / 100) : row.unitPrice;\n      if (sh > 0 && (unit >= sh || unit < sh * 0.2)) {\n        skipped.suspicious++;\n        suspicious.push({ item_code: code, barcode: catalog.get(code).barcode, shelf: sh, promo: Math.round(unit * 100) / 100, description });\n        continue;\n      }\n      if (!(sh > 0)) { skipped.unknown++; continue; } // אין מחיר מדף להשוואה: לא מציגים\n      rows.push({\n        promo_id: id, item_code: code, description, kind: row.kind, min_qty: row.kind === 'percent' && rt === '2' ? 1 : min,\n        bundle_price: row.bundle_price ?? null, discount_rate: row.discount_rate ?? null, max_qty: max,\n        club_only: clubOnly, starts_at: start ? start.toISOString() : null, ends_at: end ? end.toISOString() : null,\n      });\n    }\n  }\n  return { rows, skipped, suspicious };\n}\n\n// ---------- הענף ----------\nconst CHAIN = 'ampm';\nconst BASE = 'https://yonisaban.github.io/CartWise/';\nconst products = await this.helpers.httpRequest({ url: BASE + 'data/products.json?t=' + Date.now(), json: true });\n// מוצרי הקטלוג: הברקוד, וקודים פנימיים של מוצרים במשקל (שלא מקבלים מבצע)\nconst catalog = new Map();\nfor (const p of products) {\n  catalog.set(p.barcode, { barcode: p.barcode, kg: p.unit === 'kg' });\n  for (const c of Object.values(p.chain_codes || {})) catalog.set(c, { barcode: p.barcode, kg: true });\n}\n// מחירי המדף של הסניף מ-Supabase (קריאה ציבורית, עם המפתח הציבורי מ-js/config.js של האתר), להשוואה (מחיר חשוד)\nconst cfg = String(await this.helpers.httpRequest({ url: BASE + 'js/config.js?t=' + Date.now() }));\nconst SUPA = cfg.match(/SUPABASE_URL\\s*=\\s*\"([^\"]+)\"/)[1];\nconst KEY = cfg.match(/SUPABASE_PUBLISHABLE_KEY\\s*=\\s*\"([^\"]+)\"/)[1];\nconst codes = products.filter((p) => p.unit !== 'kg').map((p) => p.barcode);\nconst prices = await this.helpers.httpRequest({\n  url: SUPA + '/rest/v1/chain_items?select=item_code,price&chain_id=eq.' + CHAIN + '&item_code=in.(' + codes.join(',') + ')',\n  headers: { apikey: KEY }, json: true,\n});\nconst shelf = new Map(prices.map((r) => [r.item_code, Number(r.price)]));\nconst xml = $input.first().json.data;\nif (!/<Promotion>/i.test(xml || '')) throw new Error('בקובץ המבצעים אין רשומות Promotion');\nconst result = parsePromos(xml, catalog, shelf, new Date());\nconsole.log(CHAIN + ': מבצעים', result.rows.length, JSON.stringify(result.skipped));\nreturn [{ json: { payload: { chain_id: CHAIN, ...result } } }];\n"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p942",
+      "name": "AM:PM: שמירת מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5940,
+        1660
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/rpc/replace_chain_promos",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p: $json.payload }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p943",
+      "name": "AM:PM: מבצעים נכשלו",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5060,
+        1820
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/rpc/promo_failed",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_chain: 'ampm', p_error: String($json.error?.message || $json.error || $json.message || 'שגיאה לא ידועה').slice(0, 300) }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p944",
+      "name": "קרפור: קובץ מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3080,
+        2060
+      ],
+      "parameters": {
+        "jsCode": "// הדף הראשי: const path ו-const files של היום. לא תלוי בענף המחירים\nconst html = String(await this.helpers.httpRequest({ url: 'https://prices.carrefour.co.il/' }));\nconst path = (html.match(/const path = '([^']+)'/) || [])[1];\nconst raw = (html.match(/const files = (\\[[\\s\\S]*?\\]);/) || [])[1];\nif (!path || !raw) throw new Error('לא נמצאה רשימת הקבצים בדף של קרפור');\nconst list = JSON.parse(raw).map((f) => f.name).filter((n) => /^promofull7290055700007-\\d{3}-402-/i.test(n)).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));\nif (!list.length) throw new Error('לא נמצא קובץ PromoFull של סניף 402 בדף של היום');\nreturn [{ json: { url: 'https://prices.carrefour.co.il/' + path + '/' + list[list.length - 1] } }];"
+      },
+      "onError": "continueErrorOutput",
+      "executeOnce": true
+    },
+    {
+      "id": "p945",
+      "name": "קרפור: הורדת מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3300,
+        2060
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p946",
+      "name": "קרפור: שם קובץ מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3520,
+        2060
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nitem.binary.data.fileName = 'promofull.xml.gz';\nitem.binary.data.fileExtension = 'gz';\nitem.binary.data.mimeType = 'application/gzip';\nreturn [item];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p947",
+      "name": "קרפור: פריסת מבצעים",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        3740,
+        2060
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p948",
+      "name": "קרפור: קריאת מבצעים",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        3960,
+        2060
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_0",
+        "destinationKey": "data",
+        "options": {}
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p949",
+      "name": "קרפור: כללי מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4180,
+        2060
+      ],
+      "parameters": {
+        "jsCode": "// סוכן המבצעים: הכללים מ-n8n/promo-rules.js. כל מחיר משדה מספרי בקובץ, בלי Gemini\n// הכללים של סוכן המבצעים: קורא PromoFull ומחזיר מבצעים על מוצרי הקטלוג. נכנס כמו שהוא לצומת Code ב-n8n.\n// xml: הקובץ. catalog: Map item_code -> { barcode, kg }. shelf: Map item_code -> מחיר מדף. now: Date\nfunction parsePromos(xml, catalog, shelf, now) {\n  const SKIP_WORDS = /קופון|אשראי|תו זהב|למשלמים|אפליקציה|פיצוי|מתנה/;\n  const skipped = { coupon: 0, suspicious: 0, unknown: 0, weighted: 0 };\n  const suspicious = [];\n  const rows = [];\n  const tag = (s, t) => {\n    const r = s.match(new RegExp('<' + t + '>([\\\\s\\\\S]*?)</' + t + '>', 'i'));\n    return r ? r[1].trim() : '';\n  };\n  const num = (v) => (v === '' || v == null ? null : Number(v));\n  // תאריך ושעה: PromotionStartDateTime, או PromotionStartDate עם PromotionStartHour (וולט)\n  // השעות בקובץ הן שעון ישראל: +02:00 בחורף, +03:00 בקיץ\n  const israel = (local) => {\n    const guess = new Date(local + 'Z');\n    const shown = new Date(guess.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }) + ' UTC');\n    return new Date(guess.getTime() - (shown - guess));\n  };\n  const when = (s, side) => {\n    const full = tag(s, 'Promotion' + side + 'DateTime');\n    if (full) return israel(full.slice(0, 19));\n    const d = tag(s, 'Promotion' + side + 'Date');\n    if (!d) return null;\n    const h = tag(s, 'Promotion' + side + 'Hour') || (side === 'End' ? '23:59:59' : '00:00:00');\n    return israel(d + 'T' + h.slice(0, 8));\n  };\n  const seen = new Set();\n  const re = /<Promotion>([\\s\\S]*?)<\\/Promotion>/g;\n  let m;\n  while ((m = re.exec(xml))) {\n    const s = m[1];\n    const items = [...s.matchAll(/<PromotionItem>([\\s\\S]*?)<\\/PromotionItem>/g)].map((x) => x[1]);\n    const hits = items.filter((it) => catalog.has(tag(it, 'ItemCode')));\n    if (!hits.length) continue;\n    const start = when(s, 'Start');\n    const end = when(s, 'End');\n    if (end && end <= now) continue; // פג תוקף: לא נספר\n    const id = tag(s, 'PromotionID') || tag(s, 'PromotionId');\n    const description = tag(s, 'PromotionDescription').replace(/[‎‏‪-‮]/g, '').replace(/\\s+/g, ' ').trim().slice(0, 200);\n    const club = tag(s, 'ClubID') || tag(s, 'ClubId');\n    const clubOnly = !/^0(\\s|-|$)/.test(club);\n    const minAmount = num(tag(s, 'MinPurchaseAmount'));\n    const coupon = tag(s, 'AdditionalIsCoupon') === '1' || minAmount > 0 || SKIP_WORDS.test(description);\n    for (const it of hits) {\n      const code = tag(it, 'ItemCode');\n      if (seen.has(id + ':' + code)) continue;\n      seen.add(id + ':' + code);\n      if (coupon) { skipped.coupon++; continue; }\n      if (catalog.get(code).kg || (tag(it, 'bIsWeighted') || tag(it, 'blsWeighted')) === '1') { skipped.weighted++; continue; }\n      const rt = tag(it, 'RewardType');\n      const min = Math.max(1, num(tag(it, 'MinQty')) || 1);\n      const max = num(tag(it, 'MaxQty')) || null;\n      const price = num(tag(it, 'DiscountedPrice'));\n      const rate = num(tag(it, 'DiscountRate'));\n      let row = null;\n      // 3: מחיר ליחידה. 1 ו-10: המחיר ל-min יחידות. 2: אחוז הנחה על כל יחידה\n      if (rt === '3' && price > 0) row = { kind: 'unit', bundle_price: price, unitPrice: price };\n      else if ((rt === '1' || rt === '10') && price > 0 && min > 1) row = { kind: 'bundle', bundle_price: price, unitPrice: price / min };\n      else if ((rt === '1' || rt === '10') && price > 0) row = { kind: 'unit', bundle_price: price, unitPrice: price };\n      else if (rt === '2' && rate > 0 && rate < 100) row = { kind: 'percent', discount_rate: rate, unitPrice: null };\n      if (!row) { skipped.unknown++; continue; }\n      // מחיר חשוד: גבוה ממחיר המדף, או נמוך מ-20% ממנו\n      const sh = shelf.get(code);\n      const unit = row.kind === 'percent' ? sh * (1 - rate / 100) : row.unitPrice;\n      if (sh > 0 && (unit >= sh || unit < sh * 0.2)) {\n        skipped.suspicious++;\n        suspicious.push({ item_code: code, barcode: catalog.get(code).barcode, shelf: sh, promo: Math.round(unit * 100) / 100, description });\n        continue;\n      }\n      if (!(sh > 0)) { skipped.unknown++; continue; } // אין מחיר מדף להשוואה: לא מציגים\n      rows.push({\n        promo_id: id, item_code: code, description, kind: row.kind, min_qty: row.kind === 'percent' && rt === '2' ? 1 : min,\n        bundle_price: row.bundle_price ?? null, discount_rate: row.discount_rate ?? null, max_qty: max,\n        club_only: clubOnly, starts_at: start ? start.toISOString() : null, ends_at: end ? end.toISOString() : null,\n      });\n    }\n  }\n  return { rows, skipped, suspicious };\n}\n\n// ---------- הענף ----------\nconst CHAIN = 'carrefour';\nconst BASE = 'https://yonisaban.github.io/CartWise/';\nconst products = await this.helpers.httpRequest({ url: BASE + 'data/products.json?t=' + Date.now(), json: true });\n// מוצרי הקטלוג: הברקוד, וקודים פנימיים של מוצרים במשקל (שלא מקבלים מבצע)\nconst catalog = new Map();\nfor (const p of products) {\n  catalog.set(p.barcode, { barcode: p.barcode, kg: p.unit === 'kg' });\n  for (const c of Object.values(p.chain_codes || {})) catalog.set(c, { barcode: p.barcode, kg: true });\n}\n// מחירי המדף של הסניף מ-Supabase (קריאה ציבורית, עם המפתח הציבורי מ-js/config.js של האתר), להשוואה (מחיר חשוד)\nconst cfg = String(await this.helpers.httpRequest({ url: BASE + 'js/config.js?t=' + Date.now() }));\nconst SUPA = cfg.match(/SUPABASE_URL\\s*=\\s*\"([^\"]+)\"/)[1];\nconst KEY = cfg.match(/SUPABASE_PUBLISHABLE_KEY\\s*=\\s*\"([^\"]+)\"/)[1];\nconst codes = products.filter((p) => p.unit !== 'kg').map((p) => p.barcode);\nconst prices = await this.helpers.httpRequest({\n  url: SUPA + '/rest/v1/chain_items?select=item_code,price&chain_id=eq.' + CHAIN + '&item_code=in.(' + codes.join(',') + ')',\n  headers: { apikey: KEY }, json: true,\n});\nconst shelf = new Map(prices.map((r) => [r.item_code, Number(r.price)]));\nconst xml = $input.first().json.data;\nif (!/<Promotion>/i.test(xml || '')) throw new Error('בקובץ המבצעים אין רשומות Promotion');\nconst result = parsePromos(xml, catalog, shelf, new Date());\nconsole.log(CHAIN + ': מבצעים', result.rows.length, JSON.stringify(result.skipped));\nreturn [{ json: { payload: { chain_id: CHAIN, ...result } } }];\n"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p950",
+      "name": "קרפור: שמירת מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4400,
+        2060
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/rpc/replace_chain_promos",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p: $json.payload }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p951",
+      "name": "קרפור: מבצעים נכשלו",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3740,
+        2220
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/rpc/promo_failed",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_chain: 'carrefour', p_error: String($json.error?.message || $json.error || $json.message || 'שגיאה לא ידועה').slice(0, 300) }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p952",
+      "name": "שופרסל הרצליה: קובץ מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3080,
+        2540
+      ],
+      "parameters": {
+        "jsCode": "// דף קובצי המבצעים של הסניף (catID=4). לא תלוי בענף המחירים\nconst html = await this.helpers.httpRequest({ url: 'https://prices.shufersal.co.il/FileObject/UpdateCategory?catID=4&storeId=374' });\nconst m = String(html).match(/https:\\/\\/pricesprodpublic[^\"]*PromoFull7290027600007-001-374-[^\"]*/);\nif (!m) throw new Error('לא נמצא קובץ PromoFull: שופרסל הרצליה');\nreturn [{ json: { url: m[0].replace(/&amp;/g, '&') } }];"
+      },
+      "onError": "continueErrorOutput",
+      "executeOnce": true
+    },
+    {
+      "id": "p953",
+      "name": "שופרסל הרצליה: הורדת מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3300,
+        2540
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p954",
+      "name": "שופרסל הרצליה: שם קובץ מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3520,
+        2540
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nitem.binary.data.fileName = 'promofull.xml.gz';\nitem.binary.data.fileExtension = 'gz';\nitem.binary.data.mimeType = 'application/gzip';\nreturn [item];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p955",
+      "name": "שופרסל הרצליה: פריסת מבצעים",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        3740,
+        2540
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p956",
+      "name": "שופרסל הרצליה: קריאת מבצעים",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        3960,
+        2540
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_0",
+        "destinationKey": "data",
+        "options": {}
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p957",
+      "name": "שופרסל הרצליה: כללי מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4180,
+        2540
+      ],
+      "parameters": {
+        "jsCode": "// סוכן המבצעים: הכללים מ-n8n/promo-rules.js. כל מחיר משדה מספרי בקובץ, בלי Gemini\n// הכללים של סוכן המבצעים: קורא PromoFull ומחזיר מבצעים על מוצרי הקטלוג. נכנס כמו שהוא לצומת Code ב-n8n.\n// xml: הקובץ. catalog: Map item_code -> { barcode, kg }. shelf: Map item_code -> מחיר מדף. now: Date\nfunction parsePromos(xml, catalog, shelf, now) {\n  const SKIP_WORDS = /קופון|אשראי|תו זהב|למשלמים|אפליקציה|פיצוי|מתנה/;\n  const skipped = { coupon: 0, suspicious: 0, unknown: 0, weighted: 0 };\n  const suspicious = [];\n  const rows = [];\n  const tag = (s, t) => {\n    const r = s.match(new RegExp('<' + t + '>([\\\\s\\\\S]*?)</' + t + '>', 'i'));\n    return r ? r[1].trim() : '';\n  };\n  const num = (v) => (v === '' || v == null ? null : Number(v));\n  // תאריך ושעה: PromotionStartDateTime, או PromotionStartDate עם PromotionStartHour (וולט)\n  // השעות בקובץ הן שעון ישראל: +02:00 בחורף, +03:00 בקיץ\n  const israel = (local) => {\n    const guess = new Date(local + 'Z');\n    const shown = new Date(guess.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }) + ' UTC');\n    return new Date(guess.getTime() - (shown - guess));\n  };\n  const when = (s, side) => {\n    const full = tag(s, 'Promotion' + side + 'DateTime');\n    if (full) return israel(full.slice(0, 19));\n    const d = tag(s, 'Promotion' + side + 'Date');\n    if (!d) return null;\n    const h = tag(s, 'Promotion' + side + 'Hour') || (side === 'End' ? '23:59:59' : '00:00:00');\n    return israel(d + 'T' + h.slice(0, 8));\n  };\n  const seen = new Set();\n  const re = /<Promotion>([\\s\\S]*?)<\\/Promotion>/g;\n  let m;\n  while ((m = re.exec(xml))) {\n    const s = m[1];\n    const items = [...s.matchAll(/<PromotionItem>([\\s\\S]*?)<\\/PromotionItem>/g)].map((x) => x[1]);\n    const hits = items.filter((it) => catalog.has(tag(it, 'ItemCode')));\n    if (!hits.length) continue;\n    const start = when(s, 'Start');\n    const end = when(s, 'End');\n    if (end && end <= now) continue; // פג תוקף: לא נספר\n    const id = tag(s, 'PromotionID') || tag(s, 'PromotionId');\n    const description = tag(s, 'PromotionDescription').replace(/[‎‏‪-‮]/g, '').replace(/\\s+/g, ' ').trim().slice(0, 200);\n    const club = tag(s, 'ClubID') || tag(s, 'ClubId');\n    const clubOnly = !/^0(\\s|-|$)/.test(club);\n    const minAmount = num(tag(s, 'MinPurchaseAmount'));\n    const coupon = tag(s, 'AdditionalIsCoupon') === '1' || minAmount > 0 || SKIP_WORDS.test(description);\n    for (const it of hits) {\n      const code = tag(it, 'ItemCode');\n      if (seen.has(id + ':' + code)) continue;\n      seen.add(id + ':' + code);\n      if (coupon) { skipped.coupon++; continue; }\n      if (catalog.get(code).kg || (tag(it, 'bIsWeighted') || tag(it, 'blsWeighted')) === '1') { skipped.weighted++; continue; }\n      const rt = tag(it, 'RewardType');\n      const min = Math.max(1, num(tag(it, 'MinQty')) || 1);\n      const max = num(tag(it, 'MaxQty')) || null;\n      const price = num(tag(it, 'DiscountedPrice'));\n      const rate = num(tag(it, 'DiscountRate'));\n      let row = null;\n      // 3: מחיר ליחידה. 1 ו-10: המחיר ל-min יחידות. 2: אחוז הנחה על כל יחידה\n      if (rt === '3' && price > 0) row = { kind: 'unit', bundle_price: price, unitPrice: price };\n      else if ((rt === '1' || rt === '10') && price > 0 && min > 1) row = { kind: 'bundle', bundle_price: price, unitPrice: price / min };\n      else if ((rt === '1' || rt === '10') && price > 0) row = { kind: 'unit', bundle_price: price, unitPrice: price };\n      else if (rt === '2' && rate > 0 && rate < 100) row = { kind: 'percent', discount_rate: rate, unitPrice: null };\n      if (!row) { skipped.unknown++; continue; }\n      // מחיר חשוד: גבוה ממחיר המדף, או נמוך מ-20% ממנו\n      const sh = shelf.get(code);\n      const unit = row.kind === 'percent' ? sh * (1 - rate / 100) : row.unitPrice;\n      if (sh > 0 && (unit >= sh || unit < sh * 0.2)) {\n        skipped.suspicious++;\n        suspicious.push({ item_code: code, barcode: catalog.get(code).barcode, shelf: sh, promo: Math.round(unit * 100) / 100, description });\n        continue;\n      }\n      if (!(sh > 0)) { skipped.unknown++; continue; } // אין מחיר מדף להשוואה: לא מציגים\n      rows.push({\n        promo_id: id, item_code: code, description, kind: row.kind, min_qty: row.kind === 'percent' && rt === '2' ? 1 : min,\n        bundle_price: row.bundle_price ?? null, discount_rate: row.discount_rate ?? null, max_qty: max,\n        club_only: clubOnly, starts_at: start ? start.toISOString() : null, ends_at: end ? end.toISOString() : null,\n      });\n    }\n  }\n  return { rows, skipped, suspicious };\n}\n\n// ---------- הענף ----------\nconst CHAIN = 'shufersal_herzliya';\nconst BASE = 'https://yonisaban.github.io/CartWise/';\nconst products = await this.helpers.httpRequest({ url: BASE + 'data/products.json?t=' + Date.now(), json: true });\n// מוצרי הקטלוג: הברקוד, וקודים פנימיים של מוצרים במשקל (שלא מקבלים מבצע)\nconst catalog = new Map();\nfor (const p of products) {\n  catalog.set(p.barcode, { barcode: p.barcode, kg: p.unit === 'kg' });\n  for (const c of Object.values(p.chain_codes || {})) catalog.set(c, { barcode: p.barcode, kg: true });\n}\n// מחירי המדף של הסניף מ-Supabase (קריאה ציבורית, עם המפתח הציבורי מ-js/config.js של האתר), להשוואה (מחיר חשוד)\nconst cfg = String(await this.helpers.httpRequest({ url: BASE + 'js/config.js?t=' + Date.now() }));\nconst SUPA = cfg.match(/SUPABASE_URL\\s*=\\s*\"([^\"]+)\"/)[1];\nconst KEY = cfg.match(/SUPABASE_PUBLISHABLE_KEY\\s*=\\s*\"([^\"]+)\"/)[1];\nconst codes = products.filter((p) => p.unit !== 'kg').map((p) => p.barcode);\nconst prices = await this.helpers.httpRequest({\n  url: SUPA + '/rest/v1/chain_items?select=item_code,price&chain_id=eq.' + CHAIN + '&item_code=in.(' + codes.join(',') + ')',\n  headers: { apikey: KEY }, json: true,\n});\nconst shelf = new Map(prices.map((r) => [r.item_code, Number(r.price)]));\nconst xml = $input.first().json.data;\nif (!/<Promotion>/i.test(xml || '')) throw new Error('בקובץ המבצעים אין רשומות Promotion');\nconst result = parsePromos(xml, catalog, shelf, new Date());\nconsole.log(CHAIN + ': מבצעים', result.rows.length, JSON.stringify(result.skipped));\nreturn [{ json: { payload: { chain_id: CHAIN, ...result } } }];\n"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p958",
+      "name": "שופרסל הרצליה: שמירת מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4400,
+        2540
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/rpc/replace_chain_promos",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p: $json.payload }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p959",
+      "name": "שופרסל הרצליה: מבצעים נכשלו",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3740,
+        2700
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/rpc/promo_failed",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_chain: 'shufersal_herzliya', p_error: String($json.error?.message || $json.error || $json.message || 'שגיאה לא ידועה').slice(0, 300) }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p960",
+      "name": "טיב טעם הרצליה: חיפוש מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4400,
+        3020
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://url.publishedprices.co.il/file/json/dir",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $('טיב טעם הרצליה: אסימון קבצים').first().json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "sSearch",
+              "value": "PromoFull7290873255550-"
+            },
+            {
+              "name": "iDisplayLength",
+              "value": "100000"
+            },
+            {
+              "name": "csrftoken",
+              "value": "={{ $('טיב טעם הרצליה: אסימון קבצים').first().json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "executeOnce": true,
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p961",
+      "name": "טיב טעם הרצליה: קובץ מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4620,
+        3020
+      ],
+      "parameters": {
+        "jsCode": "// שמות הקבצים ב-Cerberus לפעמים באותיות קטנות, ולכן בלי תלות ברישיות\nconst list = ($input.first().json.aaData || []).map((f) => f.fname).filter((n) => /^promofull7290873255550-\\d{3}-052-/i.test(n)).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));\nif (!list.length) throw new Error('לא נמצא קובץ PromoFull ב-Cerberus: טיב טעם הרצליה');\nreturn [{ json: { url: 'https://url.publishedprices.co.il/file/d/' + list[list.length - 1], cookie: $('טיב טעם הרצליה: אסימון קבצים').first().json.cookie } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p962",
+      "name": "טיב טעם הרצליה: הורדת מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4840,
+        3020
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p963",
+      "name": "טיב טעם הרצליה: שם קובץ מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5060,
+        3020
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nitem.binary.data.fileName = 'promofull.xml.gz';\nitem.binary.data.fileExtension = 'gz';\nitem.binary.data.mimeType = 'application/gzip';\nreturn [item];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p964",
+      "name": "טיב טעם הרצליה: פריסת מבצעים",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        5280,
+        3020
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p965",
+      "name": "טיב טעם הרצליה: קריאת מבצעים",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        5500,
+        3020
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_0",
+        "destinationKey": "data",
+        "options": {}
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p966",
+      "name": "טיב טעם הרצליה: כללי מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5720,
+        3020
+      ],
+      "parameters": {
+        "jsCode": "// סוכן המבצעים: הכללים מ-n8n/promo-rules.js. כל מחיר משדה מספרי בקובץ, בלי Gemini\n// הכללים של סוכן המבצעים: קורא PromoFull ומחזיר מבצעים על מוצרי הקטלוג. נכנס כמו שהוא לצומת Code ב-n8n.\n// xml: הקובץ. catalog: Map item_code -> { barcode, kg }. shelf: Map item_code -> מחיר מדף. now: Date\nfunction parsePromos(xml, catalog, shelf, now) {\n  const SKIP_WORDS = /קופון|אשראי|תו זהב|למשלמים|אפליקציה|פיצוי|מתנה/;\n  const skipped = { coupon: 0, suspicious: 0, unknown: 0, weighted: 0 };\n  const suspicious = [];\n  const rows = [];\n  const tag = (s, t) => {\n    const r = s.match(new RegExp('<' + t + '>([\\\\s\\\\S]*?)</' + t + '>', 'i'));\n    return r ? r[1].trim() : '';\n  };\n  const num = (v) => (v === '' || v == null ? null : Number(v));\n  // תאריך ושעה: PromotionStartDateTime, או PromotionStartDate עם PromotionStartHour (וולט)\n  // השעות בקובץ הן שעון ישראל: +02:00 בחורף, +03:00 בקיץ\n  const israel = (local) => {\n    const guess = new Date(local + 'Z');\n    const shown = new Date(guess.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }) + ' UTC');\n    return new Date(guess.getTime() - (shown - guess));\n  };\n  const when = (s, side) => {\n    const full = tag(s, 'Promotion' + side + 'DateTime');\n    if (full) return israel(full.slice(0, 19));\n    const d = tag(s, 'Promotion' + side + 'Date');\n    if (!d) return null;\n    const h = tag(s, 'Promotion' + side + 'Hour') || (side === 'End' ? '23:59:59' : '00:00:00');\n    return israel(d + 'T' + h.slice(0, 8));\n  };\n  const seen = new Set();\n  const re = /<Promotion>([\\s\\S]*?)<\\/Promotion>/g;\n  let m;\n  while ((m = re.exec(xml))) {\n    const s = m[1];\n    const items = [...s.matchAll(/<PromotionItem>([\\s\\S]*?)<\\/PromotionItem>/g)].map((x) => x[1]);\n    const hits = items.filter((it) => catalog.has(tag(it, 'ItemCode')));\n    if (!hits.length) continue;\n    const start = when(s, 'Start');\n    const end = when(s, 'End');\n    if (end && end <= now) continue; // פג תוקף: לא נספר\n    const id = tag(s, 'PromotionID') || tag(s, 'PromotionId');\n    const description = tag(s, 'PromotionDescription').replace(/[‎‏‪-‮]/g, '').replace(/\\s+/g, ' ').trim().slice(0, 200);\n    const club = tag(s, 'ClubID') || tag(s, 'ClubId');\n    const clubOnly = !/^0(\\s|-|$)/.test(club);\n    const minAmount = num(tag(s, 'MinPurchaseAmount'));\n    const coupon = tag(s, 'AdditionalIsCoupon') === '1' || minAmount > 0 || SKIP_WORDS.test(description);\n    for (const it of hits) {\n      const code = tag(it, 'ItemCode');\n      if (seen.has(id + ':' + code)) continue;\n      seen.add(id + ':' + code);\n      if (coupon) { skipped.coupon++; continue; }\n      if (catalog.get(code).kg || (tag(it, 'bIsWeighted') || tag(it, 'blsWeighted')) === '1') { skipped.weighted++; continue; }\n      const rt = tag(it, 'RewardType');\n      const min = Math.max(1, num(tag(it, 'MinQty')) || 1);\n      const max = num(tag(it, 'MaxQty')) || null;\n      const price = num(tag(it, 'DiscountedPrice'));\n      const rate = num(tag(it, 'DiscountRate'));\n      let row = null;\n      // 3: מחיר ליחידה. 1 ו-10: המחיר ל-min יחידות. 2: אחוז הנחה על כל יחידה\n      if (rt === '3' && price > 0) row = { kind: 'unit', bundle_price: price, unitPrice: price };\n      else if ((rt === '1' || rt === '10') && price > 0 && min > 1) row = { kind: 'bundle', bundle_price: price, unitPrice: price / min };\n      else if ((rt === '1' || rt === '10') && price > 0) row = { kind: 'unit', bundle_price: price, unitPrice: price };\n      else if (rt === '2' && rate > 0 && rate < 100) row = { kind: 'percent', discount_rate: rate, unitPrice: null };\n      if (!row) { skipped.unknown++; continue; }\n      // מחיר חשוד: גבוה ממחיר המדף, או נמוך מ-20% ממנו\n      const sh = shelf.get(code);\n      const unit = row.kind === 'percent' ? sh * (1 - rate / 100) : row.unitPrice;\n      if (sh > 0 && (unit >= sh || unit < sh * 0.2)) {\n        skipped.suspicious++;\n        suspicious.push({ item_code: code, barcode: catalog.get(code).barcode, shelf: sh, promo: Math.round(unit * 100) / 100, description });\n        continue;\n      }\n      if (!(sh > 0)) { skipped.unknown++; continue; } // אין מחיר מדף להשוואה: לא מציגים\n      rows.push({\n        promo_id: id, item_code: code, description, kind: row.kind, min_qty: row.kind === 'percent' && rt === '2' ? 1 : min,\n        bundle_price: row.bundle_price ?? null, discount_rate: row.discount_rate ?? null, max_qty: max,\n        club_only: clubOnly, starts_at: start ? start.toISOString() : null, ends_at: end ? end.toISOString() : null,\n      });\n    }\n  }\n  return { rows, skipped, suspicious };\n}\n\n// ---------- הענף ----------\nconst CHAIN = 'tiv_taam_herzliya';\nconst BASE = 'https://yonisaban.github.io/CartWise/';\nconst products = await this.helpers.httpRequest({ url: BASE + 'data/products.json?t=' + Date.now(), json: true });\n// מוצרי הקטלוג: הברקוד, וקודים פנימיים של מוצרים במשקל (שלא מקבלים מבצע)\nconst catalog = new Map();\nfor (const p of products) {\n  catalog.set(p.barcode, { barcode: p.barcode, kg: p.unit === 'kg' });\n  for (const c of Object.values(p.chain_codes || {})) catalog.set(c, { barcode: p.barcode, kg: true });\n}\n// מחירי המדף של הסניף מ-Supabase (קריאה ציבורית, עם המפתח הציבורי מ-js/config.js של האתר), להשוואה (מחיר חשוד)\nconst cfg = String(await this.helpers.httpRequest({ url: BASE + 'js/config.js?t=' + Date.now() }));\nconst SUPA = cfg.match(/SUPABASE_URL\\s*=\\s*\"([^\"]+)\"/)[1];\nconst KEY = cfg.match(/SUPABASE_PUBLISHABLE_KEY\\s*=\\s*\"([^\"]+)\"/)[1];\nconst codes = products.filter((p) => p.unit !== 'kg').map((p) => p.barcode);\nconst prices = await this.helpers.httpRequest({\n  url: SUPA + '/rest/v1/chain_items?select=item_code,price&chain_id=eq.' + CHAIN + '&item_code=in.(' + codes.join(',') + ')',\n  headers: { apikey: KEY }, json: true,\n});\nconst shelf = new Map(prices.map((r) => [r.item_code, Number(r.price)]));\nconst xml = $input.first().json.data;\nif (!/<Promotion>/i.test(xml || '')) throw new Error('בקובץ המבצעים אין רשומות Promotion');\nconst result = parsePromos(xml, catalog, shelf, new Date());\nconsole.log(CHAIN + ': מבצעים', result.rows.length, JSON.stringify(result.skipped));\nreturn [{ json: { payload: { chain_id: CHAIN, ...result } } }];\n"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p967",
+      "name": "טיב טעם הרצליה: שמירת מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5940,
+        3020
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/rpc/replace_chain_promos",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p: $json.payload }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p968",
+      "name": "טיב טעם הרצליה: מבצעים נכשלו",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5060,
+        3180
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/rpc/promo_failed",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_chain: 'tiv_taam_herzliya', p_error: String($json.error?.message || $json.error || $json.message || 'שגיאה לא ידועה').slice(0, 300) }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p969",
+      "name": "סטופ מרקט: חיפוש מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4400,
+        3500
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://url.publishedprices.co.il/file/json/dir",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $('סטופ מרקט: אסימון קבצים').first().json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "sSearch",
+              "value": "PromoFull7290639000004-"
+            },
+            {
+              "name": "iDisplayLength",
+              "value": "100000"
+            },
+            {
+              "name": "csrftoken",
+              "value": "={{ $('סטופ מרקט: אסימון קבצים').first().json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "executeOnce": true,
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p970",
+      "name": "סטופ מרקט: קובץ מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4620,
+        3500
+      ],
+      "parameters": {
+        "jsCode": "// שמות הקבצים ב-Cerberus לפעמים באותיות קטנות, ולכן בלי תלות ברישיות\nconst list = ($input.first().json.aaData || []).map((f) => f.fname).filter((n) => /^promofull7290639000004-\\d{3}-002-/i.test(n)).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));\nif (!list.length) throw new Error('לא נמצא קובץ PromoFull ב-Cerberus: סטופ מרקט');\nreturn [{ json: { url: 'https://url.publishedprices.co.il/file/d/' + list[list.length - 1], cookie: $('סטופ מרקט: אסימון קבצים').first().json.cookie } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p971",
+      "name": "סטופ מרקט: הורדת מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4840,
+        3500
+      ],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p972",
+      "name": "סטופ מרקט: שם קובץ מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5060,
+        3500
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nitem.binary.data.fileName = 'promofull.xml.gz';\nitem.binary.data.fileExtension = 'gz';\nitem.binary.data.mimeType = 'application/gzip';\nreturn [item];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p973",
+      "name": "סטופ מרקט: פריסת מבצעים",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        5280,
+        3500
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p974",
+      "name": "סטופ מרקט: קריאת מבצעים",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        5500,
+        3500
+      ],
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "file_0",
+        "destinationKey": "data",
+        "options": {}
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p975",
+      "name": "סטופ מרקט: כללי מבצעים",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5720,
+        3500
+      ],
+      "parameters": {
+        "jsCode": "// סוכן המבצעים: הכללים מ-n8n/promo-rules.js. כל מחיר משדה מספרי בקובץ, בלי Gemini\n// הכללים של סוכן המבצעים: קורא PromoFull ומחזיר מבצעים על מוצרי הקטלוג. נכנס כמו שהוא לצומת Code ב-n8n.\n// xml: הקובץ. catalog: Map item_code -> { barcode, kg }. shelf: Map item_code -> מחיר מדף. now: Date\nfunction parsePromos(xml, catalog, shelf, now) {\n  const SKIP_WORDS = /קופון|אשראי|תו זהב|למשלמים|אפליקציה|פיצוי|מתנה/;\n  const skipped = { coupon: 0, suspicious: 0, unknown: 0, weighted: 0 };\n  const suspicious = [];\n  const rows = [];\n  const tag = (s, t) => {\n    const r = s.match(new RegExp('<' + t + '>([\\\\s\\\\S]*?)</' + t + '>', 'i'));\n    return r ? r[1].trim() : '';\n  };\n  const num = (v) => (v === '' || v == null ? null : Number(v));\n  // תאריך ושעה: PromotionStartDateTime, או PromotionStartDate עם PromotionStartHour (וולט)\n  // השעות בקובץ הן שעון ישראל: +02:00 בחורף, +03:00 בקיץ\n  const israel = (local) => {\n    const guess = new Date(local + 'Z');\n    const shown = new Date(guess.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }) + ' UTC');\n    return new Date(guess.getTime() - (shown - guess));\n  };\n  const when = (s, side) => {\n    const full = tag(s, 'Promotion' + side + 'DateTime');\n    if (full) return israel(full.slice(0, 19));\n    const d = tag(s, 'Promotion' + side + 'Date');\n    if (!d) return null;\n    const h = tag(s, 'Promotion' + side + 'Hour') || (side === 'End' ? '23:59:59' : '00:00:00');\n    return israel(d + 'T' + h.slice(0, 8));\n  };\n  const seen = new Set();\n  const re = /<Promotion>([\\s\\S]*?)<\\/Promotion>/g;\n  let m;\n  while ((m = re.exec(xml))) {\n    const s = m[1];\n    const items = [...s.matchAll(/<PromotionItem>([\\s\\S]*?)<\\/PromotionItem>/g)].map((x) => x[1]);\n    const hits = items.filter((it) => catalog.has(tag(it, 'ItemCode')));\n    if (!hits.length) continue;\n    const start = when(s, 'Start');\n    const end = when(s, 'End');\n    if (end && end <= now) continue; // פג תוקף: לא נספר\n    const id = tag(s, 'PromotionID') || tag(s, 'PromotionId');\n    const description = tag(s, 'PromotionDescription').replace(/[‎‏‪-‮]/g, '').replace(/\\s+/g, ' ').trim().slice(0, 200);\n    const club = tag(s, 'ClubID') || tag(s, 'ClubId');\n    const clubOnly = !/^0(\\s|-|$)/.test(club);\n    const minAmount = num(tag(s, 'MinPurchaseAmount'));\n    const coupon = tag(s, 'AdditionalIsCoupon') === '1' || minAmount > 0 || SKIP_WORDS.test(description);\n    for (const it of hits) {\n      const code = tag(it, 'ItemCode');\n      if (seen.has(id + ':' + code)) continue;\n      seen.add(id + ':' + code);\n      if (coupon) { skipped.coupon++; continue; }\n      if (catalog.get(code).kg || (tag(it, 'bIsWeighted') || tag(it, 'blsWeighted')) === '1') { skipped.weighted++; continue; }\n      const rt = tag(it, 'RewardType');\n      const min = Math.max(1, num(tag(it, 'MinQty')) || 1);\n      const max = num(tag(it, 'MaxQty')) || null;\n      const price = num(tag(it, 'DiscountedPrice'));\n      const rate = num(tag(it, 'DiscountRate'));\n      let row = null;\n      // 3: מחיר ליחידה. 1 ו-10: המחיר ל-min יחידות. 2: אחוז הנחה על כל יחידה\n      if (rt === '3' && price > 0) row = { kind: 'unit', bundle_price: price, unitPrice: price };\n      else if ((rt === '1' || rt === '10') && price > 0 && min > 1) row = { kind: 'bundle', bundle_price: price, unitPrice: price / min };\n      else if ((rt === '1' || rt === '10') && price > 0) row = { kind: 'unit', bundle_price: price, unitPrice: price };\n      else if (rt === '2' && rate > 0 && rate < 100) row = { kind: 'percent', discount_rate: rate, unitPrice: null };\n      if (!row) { skipped.unknown++; continue; }\n      // מחיר חשוד: גבוה ממחיר המדף, או נמוך מ-20% ממנו\n      const sh = shelf.get(code);\n      const unit = row.kind === 'percent' ? sh * (1 - rate / 100) : row.unitPrice;\n      if (sh > 0 && (unit >= sh || unit < sh * 0.2)) {\n        skipped.suspicious++;\n        suspicious.push({ item_code: code, barcode: catalog.get(code).barcode, shelf: sh, promo: Math.round(unit * 100) / 100, description });\n        continue;\n      }\n      if (!(sh > 0)) { skipped.unknown++; continue; } // אין מחיר מדף להשוואה: לא מציגים\n      rows.push({\n        promo_id: id, item_code: code, description, kind: row.kind, min_qty: row.kind === 'percent' && rt === '2' ? 1 : min,\n        bundle_price: row.bundle_price ?? null, discount_rate: row.discount_rate ?? null, max_qty: max,\n        club_only: clubOnly, starts_at: start ? start.toISOString() : null, ends_at: end ? end.toISOString() : null,\n      });\n    }\n  }\n  return { rows, skipped, suspicious };\n}\n\n// ---------- הענף ----------\nconst CHAIN = 'stop_market';\nconst BASE = 'https://yonisaban.github.io/CartWise/';\nconst products = await this.helpers.httpRequest({ url: BASE + 'data/products.json?t=' + Date.now(), json: true });\n// מוצרי הקטלוג: הברקוד, וקודים פנימיים של מוצרים במשקל (שלא מקבלים מבצע)\nconst catalog = new Map();\nfor (const p of products) {\n  catalog.set(p.barcode, { barcode: p.barcode, kg: p.unit === 'kg' });\n  for (const c of Object.values(p.chain_codes || {})) catalog.set(c, { barcode: p.barcode, kg: true });\n}\n// מחירי המדף של הסניף מ-Supabase (קריאה ציבורית, עם המפתח הציבורי מ-js/config.js של האתר), להשוואה (מחיר חשוד)\nconst cfg = String(await this.helpers.httpRequest({ url: BASE + 'js/config.js?t=' + Date.now() }));\nconst SUPA = cfg.match(/SUPABASE_URL\\s*=\\s*\"([^\"]+)\"/)[1];\nconst KEY = cfg.match(/SUPABASE_PUBLISHABLE_KEY\\s*=\\s*\"([^\"]+)\"/)[1];\nconst codes = products.filter((p) => p.unit !== 'kg').map((p) => p.barcode);\nconst prices = await this.helpers.httpRequest({\n  url: SUPA + '/rest/v1/chain_items?select=item_code,price&chain_id=eq.' + CHAIN + '&item_code=in.(' + codes.join(',') + ')',\n  headers: { apikey: KEY }, json: true,\n});\nconst shelf = new Map(prices.map((r) => [r.item_code, Number(r.price)]));\nconst xml = $input.first().json.data;\nif (!/<Promotion>/i.test(xml || '')) throw new Error('בקובץ המבצעים אין רשומות Promotion');\nconst result = parsePromos(xml, catalog, shelf, new Date());\nconsole.log(CHAIN + ': מבצעים', result.rows.length, JSON.stringify(result.skipped));\nreturn [{ json: { payload: { chain_id: CHAIN, ...result } } }];\n"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "p976",
+      "name": "סטופ מרקט: שמירת מבצעים",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5940,
+        3500
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/rpc/replace_chain_promos",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p: $json.payload }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p977",
+      "name": "סטופ מרקט: מבצעים נכשלו",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5060,
+        3660
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://myfvbmcmpdxtxubdraaq.supabase.co/rest/v1/rpc/promo_failed",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_chain: 'stop_market', p_error: String($json.error?.message || $json.error || $json.message || 'שגיאה לא ידועה').slice(0, 300) }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "0pIGhmS5OQVO0Avr",
+          "name": "Supabase account"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "p978",
+      "name": "מבצעים: בדיקה ידנית",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        2860,
+        -260
+      ],
+      "parameters": {}
     }
   ],
   "connections": {
@@ -3802,7 +5528,13 @@
     },
     "שופרסל: upsert ל-Supabase": {
       "main": [
-        [],
+        [
+          {
+            "node": "שופרסל: קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "שופרסל: נכשל",
@@ -3814,7 +5546,13 @@
     },
     "וולט: upsert ל-Supabase": {
       "main": [
-        [],
+        [
+          {
+            "node": "וולט: קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "וולט: נכשל",
@@ -3826,7 +5564,13 @@
     },
     "טיב טעם: upsert ל-Supabase": {
       "main": [
-        [],
+        [
+          {
+            "node": "טיב טעם: חיפוש מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "טיב טעם: נכשל",
@@ -4195,7 +5939,13 @@
     },
     "רמי לוי: upsert ל-Supabase": {
       "main": [
-        [],
+        [
+          {
+            "node": "רמי לוי: חיפוש מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "רמי לוי: נכשל",
@@ -4441,7 +6191,13 @@
     },
     "AM:PM: upsert ל-Supabase": {
       "main": [
-        [],
+        [
+          {
+            "node": "AM:PM: חיפוש מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "AM:PM: נכשל",
@@ -4579,7 +6335,13 @@
     },
     "קרפור: upsert ל-Supabase": {
       "main": [
-        [],
+        [
+          {
+            "node": "קרפור: קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "קרפור: נכשל",
@@ -4717,7 +6479,13 @@
     },
     "שופרסל הרצליה: upsert ל-Supabase": {
       "main": [
-        [],
+        [
+          {
+            "node": "שופרסל הרצליה: קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "שופרסל הרצליה: נכשל",
@@ -4963,7 +6731,13 @@
     },
     "טיב טעם הרצליה: upsert ל-Supabase": {
       "main": [
-        [],
+        [
+          {
+            "node": "טיב טעם הרצליה: חיפוש מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "טיב טעם הרצליה: נכשל",
@@ -5209,7 +6983,13 @@
     },
     "סטופ מרקט: upsert ל-Supabase": {
       "main": [
-        [],
+        [
+          {
+            "node": "סטופ מרקט: חיפוש מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "סטופ מרקט: נכשל",
@@ -5396,6 +7176,1202 @@
         [
           {
             "node": "סוכנים: נשלח היום",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל: קובץ מבצעים": {
+      "main": [
+        [
+          {
+            "node": "שופרסל: הורדת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "שופרסל: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל: הורדת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "שופרסל: שם קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "שופרסל: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל: שם קובץ מבצעים": {
+      "main": [
+        [
+          {
+            "node": "שופרסל: פריסת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "שופרסל: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל: פריסת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "שופרסל: קריאת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "שופרסל: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל: קריאת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "שופרסל: כללי מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "שופרסל: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל: כללי מבצעים": {
+      "main": [
+        [
+          {
+            "node": "שופרסל: שמירת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "שופרסל: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל: שמירת מבצעים": {
+      "main": [
+        [],
+        [
+          {
+            "node": "שופרסל: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "וולט: קובץ מבצעים": {
+      "main": [
+        [
+          {
+            "node": "וולט: הורדת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "וולט: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "וולט: הורדת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "וולט: שם קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "וולט: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "וולט: שם קובץ מבצעים": {
+      "main": [
+        [
+          {
+            "node": "וולט: פריסת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "וולט: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "וולט: פריסת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "וולט: קריאת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "וולט: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "וולט: קריאת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "וולט: כללי מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "וולט: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "וולט: כללי מבצעים": {
+      "main": [
+        [
+          {
+            "node": "וולט: שמירת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "וולט: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "וולט: שמירת מבצעים": {
+      "main": [
+        [],
+        [
+          {
+            "node": "וולט: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: חיפוש מבצעים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: קובץ מבצעים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: הורדת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: הורדת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: שם קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: שם קובץ מבצעים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: פריסת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: פריסת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: קריאת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: קריאת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: כללי מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: כללי מבצעים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם: שמירת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם: שמירת מבצעים": {
+      "main": [
+        [],
+        [
+          {
+            "node": "טיב טעם: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: חיפוש מבצעים": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: קובץ מבצעים": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: הורדת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: הורדת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: שם קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: שם קובץ מבצעים": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: פריסת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: פריסת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: קריאת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: קריאת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: כללי מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: כללי מבצעים": {
+      "main": [
+        [
+          {
+            "node": "רמי לוי: שמירת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "רמי לוי: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "רמי לוי: שמירת מבצעים": {
+      "main": [
+        [],
+        [
+          {
+            "node": "רמי לוי: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: חיפוש מבצעים": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: קובץ מבצעים": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: הורדת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: הורדת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: שם קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: שם קובץ מבצעים": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: פריסת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: פריסת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: קריאת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: קריאת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: כללי מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: כללי מבצעים": {
+      "main": [
+        [
+          {
+            "node": "AM:PM: שמירת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AM:PM: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AM:PM: שמירת מבצעים": {
+      "main": [
+        [],
+        [
+          {
+            "node": "AM:PM: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קרפור: קובץ מבצעים": {
+      "main": [
+        [
+          {
+            "node": "קרפור: הורדת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "קרפור: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קרפור: הורדת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "קרפור: שם קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "קרפור: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קרפור: שם קובץ מבצעים": {
+      "main": [
+        [
+          {
+            "node": "קרפור: פריסת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "קרפור: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קרפור: פריסת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "קרפור: קריאת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "קרפור: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קרפור: קריאת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "קרפור: כללי מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "קרפור: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קרפור: כללי מבצעים": {
+      "main": [
+        [
+          {
+            "node": "קרפור: שמירת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "קרפור: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "קרפור: שמירת מבצעים": {
+      "main": [
+        [],
+        [
+          {
+            "node": "קרפור: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל הרצליה: קובץ מבצעים": {
+      "main": [
+        [
+          {
+            "node": "שופרסל הרצליה: הורדת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "שופרסל הרצליה: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל הרצליה: הורדת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "שופרסל הרצליה: שם קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "שופרסל הרצליה: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל הרצליה: שם קובץ מבצעים": {
+      "main": [
+        [
+          {
+            "node": "שופרסל הרצליה: פריסת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "שופרסל הרצליה: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל הרצליה: פריסת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "שופרסל הרצליה: קריאת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "שופרסל הרצליה: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל הרצליה: קריאת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "שופרסל הרצליה: כללי מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "שופרסל הרצליה: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל הרצליה: כללי מבצעים": {
+      "main": [
+        [
+          {
+            "node": "שופרסל הרצליה: שמירת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "שופרסל הרצליה: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "שופרסל הרצליה: שמירת מבצעים": {
+      "main": [
+        [],
+        [
+          {
+            "node": "שופרסל הרצליה: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: חיפוש מבצעים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: קובץ מבצעים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: הורדת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: הורדת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: שם קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: שם קובץ מבצעים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: פריסת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: פריסת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: קריאת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: קריאת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: כללי מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: כללי מבצעים": {
+      "main": [
+        [
+          {
+            "node": "טיב טעם הרצליה: שמירת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "טיב טעם הרצליה: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "טיב טעם הרצליה: שמירת מבצעים": {
+      "main": [
+        [],
+        [
+          {
+            "node": "טיב טעם הרצליה: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: חיפוש מבצעים": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: קובץ מבצעים": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: הורדת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: הורדת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: שם קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: שם קובץ מבצעים": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: פריסת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: פריסת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: קריאת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: קריאת מבצעים": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: כללי מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: כללי מבצעים": {
+      "main": [
+        [
+          {
+            "node": "סטופ מרקט: שמירת מבצעים",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "סטופ מרקט: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "סטופ מרקט: שמירת מבצעים": {
+      "main": [
+        [],
+        [
+          {
+            "node": "סטופ מרקט: מבצעים נכשלו",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "מבצעים: בדיקה ידנית": {
+      "main": [
+        [
+          {
+            "node": "שופרסל: קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "וולט: קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "קרפור: קובץ מבצעים",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "שופרסל הרצליה: קובץ מבצעים",
             "type": "main",
             "index": 0
           }

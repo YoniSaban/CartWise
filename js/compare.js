@@ -29,6 +29,49 @@ function toAgorot(price) {
   return Math.round(Number(price) * 100);
 }
 
+// ---------- מבצעים (מיילסטון 14) ----------
+// promos: Map "chain_id:item_code" -> [מבצע], מהטבלה chain_promos. רק מבצעים בתוקף, ורק מוצרים ארוזים.
+// מבצע: { kind: "unit" | "bundle" | "percent", min_qty, bundle_price, discount_rate, max_qty, club_only, description }
+//   unit: מחיר ליחידה (כשקונים לפחות min_qty). bundle: min_qty יחידות ב-bundle_price.
+//   percent: בכל קבוצה של min_qty יחידות, האחרונה בהנחה של discount_rate אחוז ("השני ב-50%").
+// max_qty: מעבר לכמות הזו, מחיר מדף. מבצע מועדון לא משנה את המחיר, רק מוצג.
+
+// הסכום באגורות לכמות qty עם מבצע אחד. shelf: מחיר מדף ליחידה באגורות. null אם המבצע לא חל על הכמות
+export function promoAmount(shelf, qty, promo) {
+  const min = Math.max(1, Number(promo.min_qty) || 1);
+  const capped = promo.max_qty ? Math.min(qty, Number(promo.max_qty)) : qty;
+  const rest = (n) => Math.round(shelf * n);
+  if (promo.kind === "unit") {
+    if (capped < min) return null;
+    return Math.round(toAgorot(promo.bundle_price) * capped) + rest(qty - capped);
+  }
+  const groups = Math.floor(capped / min);
+  if (!groups) return null;
+  const used = groups * min;
+  if (promo.kind === "bundle") return groups * toAgorot(promo.bundle_price) + rest(qty - used);
+  if (promo.kind === "percent") {
+    const last = Math.round(shelf * (1 - Number(promo.discount_rate) / 100));
+    return groups * (shelf * (min - 1) + last) + rest(qty - used);
+  }
+  return null;
+}
+
+// שורה בסל עם מבצעים: { amount, promo, hint, club }
+// amount: הזול מבין המבצעים שחלים על הכמות (לא משלבים שניים), או מחיר מדף.
+// promo: המבצע שנכנס לסכום. hint: מבצע שעוד לא חל ("קנו 2 ב-20"). club: מבצע מועדון, להצגה בלבד
+export function promoLine(shelf, qty, list = []) {
+  const regular = Math.round(shelf * qty);
+  let amount = regular, promo = null, hint = null, club = null;
+  for (const p of list) {
+    if (p.club_only) { club ??= p; continue; }
+    const a = promoAmount(shelf, qty, p);
+    if (a == null) { if (Number(p.min_qty) > qty) hint ??= p; continue; }
+    if (a < amount) { amount = a; promo = p; }
+  }
+  if (promo) hint = null;
+  return { amount, regular, promo, hint, club };
+}
+
 // items: [{ barcode, qty }], products: Map ברקוד -> מוצר, chains: מ-chains.json, rows: מ-Supabase
 // approved: Map "chain:barcode" -> { item_code, item_name, price }, חלופות שהמשתמש אישר
 // מחזיר { results, notFound }:
@@ -39,7 +82,7 @@ function toAgorot(price) {
 //   "הזול ביותר" רק בין רשתות שהסל מלא בהן. אם אין כזו, אף רשת לא מקבלת אותה.
 //   cheapestPartial: "הזול מבין החלקיים", בין הרשתות החלקיות שחסרים בהן הכי מעט מוצרים, הזולה מהן.
 //   כך רשת שחסרים בה יותר מוצרים לא "זולה" רק בגלל שחסר בה יותר. רשת שאין בה אף מוצר לא מקבלת אותה.
-export function compareBasket(items, products, chains, rows, approved = new Map()) {
+export function compareBasket(items, products, chains, rows, approved = new Map(), promos = new Map()) {
   const rowOf = new Map(rows.map((r) => [`${r.chain_id}:${r.item_code}`, r]));
   const price = (chain, barcode) => {
     const product = products.get(barcode);
@@ -55,6 +98,7 @@ export function compareBasket(items, products, chains, rows, approved = new Map(
 
   const results = chains.map((chain) => {
     let total = 0;
+    let promoSaving = 0;
     const missing = [];
     const substituted = [];
     const weighted = [];
@@ -65,9 +109,13 @@ export function compareBasket(items, products, chains, rows, approved = new Map(
       const sub = approved.get(`${chain.chain_id}:${barcode}`);
       if (p != null) {
         // חצי ק"ג יכול לתת חצי אגורה: מעגלים כל שורה לאגורה שלמה
-        const amount = Math.round(toAgorot(p) * qty);
-        total += amount;
-        lines.push({ barcode, qty, amount, sub: null });
+        // מוצר ארוז: עם המבצעים של הרשת, אם יש. מוצר במשקל: מחיר מדף
+        const product = products.get(barcode);
+        const list = product.unit === "kg" ? [] : promos.get(`${chain.chain_id}:${codeIn(chain, product)}`) || [];
+        const line = promoLine(toAgorot(p), qty, list);
+        total += line.amount;
+        promoSaving += line.regular - line.amount;
+        lines.push({ barcode, qty, sub: null, ...line });
         if (products.get(barcode).unit === "kg") weighted.push({ barcode, qty, perKg: toAgorot(p) });
       } else if (sub) {
         const amount = toAgorot(sub.price) * qty;
@@ -79,7 +127,7 @@ export function compareBasket(items, products, chains, rows, approved = new Map(
         missing.push(barcode);
       }
     }
-    return { chain, total, missing, substituted, weighted, lines, complete: missing.length === 0, cheapest: false, cheapestPartial: false };
+    return { chain, total, promoSaving, missing, substituted, weighted, lines, complete: missing.length === 0, cheapest: false, cheapestPartial: false };
   });
 
   const complete = results.filter((r) => r.complete);
@@ -107,8 +155,8 @@ export function compareBasket(items, products, chains, rows, approved = new Map(
 // שנמצאו ברשת כלשהי. מחזיר null אם אין זוג כזה, או אם הפיצול לא זול מרשת אחת עם סל מלא.
 // אחרת { total, saving, base, parts: [{ chain, total, lines: [{ barcode, qty, amount }] }] }
 // base: הרשת הזולה עם סל מלא (או null), saving: ההפרש מולה באגורות
-export function splitBasket(items, products, chains, rows) {
-  const { results } = compareBasket(items, products, chains, rows);
+export function splitBasket(items, products, chains, rows, promos = new Map()) {
+  const { results } = compareBasket(items, products, chains, rows, new Map(), promos);
   const complete = results.filter((r) => r.complete);
   const base = complete.length ? complete.reduce((a, b) => (b.total < a.total ? b : a)) : null;
 
@@ -124,7 +172,7 @@ export function splitBasket(items, products, chains, rows) {
         // מחיר שווה: נשאר ברשת הראשונה
         const side = lb.amount == null || (la.amount != null && la.amount <= lb.amount) ? 0 : 1;
         const line = side === 0 ? la : lb;
-        parts[side].lines.push({ barcode: line.barcode, qty: line.qty, amount: line.amount });
+        parts[side].lines.push({ barcode: line.barcode, qty: line.qty, amount: line.amount, promo: line.promo ?? null });
         parts[side].total += line.amount;
       });
       // זוג שכל המוצרים בו מרשת אחת הוא בעצם רשת אחת, לא פיצול
