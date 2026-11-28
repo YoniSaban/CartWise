@@ -3081,7 +3081,7 @@
         }
       },
       "retryOnFail": true,
-      "maxTries": 2,
+      "maxTries": 5,
       "waitBetweenTries": 5000,
       "onError": "continueRegularOutput"
     },
@@ -5085,7 +5085,7 @@
         }
       },
       "retryOnFail": true,
-      "maxTries": 2,
+      "maxTries": 5,
       "waitBetweenTries": 5000,
       "onError": "continueRegularOutput"
     },
