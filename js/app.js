@@ -1,7 +1,7 @@
 // מעבר בין מסכים: "בניית סל", "הסל שלי", "המלצת חלופות" ו"פלט תוצאות"
 import * as basket from "./basket.js?v=12";
-import { fetchAutoBasket, fetchChainUpdates, fetchPrices, fetchPromos } from "./prices.js?v=16";
-import { codeIn, compareBasket, formatPrice, parseChainSize, parseSizeText, splitBasket, splitUnavailable, unitPrice } from "./compare.js?v=16";
+import { fetchAutoBasket, fetchChainUpdates, fetchMatches, fetchPrices, fetchPromos } from "./prices.js?v=17";
+import { allCodes, codeIn, compareBasket, formatPrice, parseChainSize, parseSizeText, splitBasket, splitUnavailable, unitPrice } from "./compare.js?v=17";
 import { findSubstitutes } from "./substitutes.js?v=12";
 import * as auth from "./auth.js?v=1";
 import * as community from "./community.js?v=3";
@@ -13,6 +13,7 @@ let products = [];
 let allChains = [];
 let chains = [];
 let byBarcode = new Map();
+let matchesReady = Promise.resolve();
 let activeCategory = null;
 let autoBarcodes = [];
 
@@ -701,7 +702,7 @@ function subPriceLines(item, product) {
 
   const per = size.base === "g" ? "ל-100 גרם" : 'ל-100 מ"ל';
   parts.push(`מחיר ${per}: ${formatPrice(unitPrice(item.price, size))}`);
-  const codes = new Set([product.barcode, ...Object.values(product.chain_codes || {})]);
+  const codes = new Set(allCodes(product));
   const prices = lastRows.filter((r) => codes.has(r.item_code) && r.price != null).map((r) => Number(r.price));
   if (prices.length) parts.push(`המקורי ברשת אחרת, ${per}: ${formatPrice(unitPrice(Math.min(...prices), original))}`);
   return parts;
@@ -732,10 +733,9 @@ async function compare() {
   const minShow = new Promise((r) => setTimeout(r, 1000));
 
   try {
-    const codes = [...new Set(items.flatMap(({ barcode }) => {
-      const p = byBarcode.get(barcode);
-      return [p.barcode, ...Object.values(p.chain_codes || {})];
-    }))];
+    // התאמות המוצרים נטענות ברקע מתחילת הדף. אם נכשלו, ההשוואה כמו קודם
+    await matchesReady;
+    const codes = [...new Set(items.flatMap(({ barcode }) => allCodes(byBarcode.get(barcode))))];
     const ids = chains.map((c) => c.chain_id);
     // דיווחים מאושרים: אם נכשל, ההשוואה ממשיכה בלעדיהם
     // מבצעים: אם נכשל, ההשוואה ממשיכה במחירי מדף
@@ -749,6 +749,7 @@ async function compare() {
     lastReports = reports;
     lastPromos = promos;
     // מוצר שהרשת הפסיקה למכור לא נכנס לחישוב, ומוצג "לא זמין"
+    dropReturnedMatches(rows);
     ({ fresh: lastRows, unavailable: lastUnavailable } = splitUnavailable(rows, updates));
     lastUpdates = updates;
     lastItems = items;
@@ -792,6 +793,26 @@ async function compare() {
   $("btn-to-results").disabled = false;
   const offered = [...suggestions.values()].filter((s) => s.item).length;
   announce(offered ? `נמצאו ${offered === 1 ? "חלופה אחת" : `${offered} חלופות`}. אשרו או דחו כל חלופה` : "לא נמצאו חלופות");
+}
+
+// התאמה של סוכן התאמת המוצרים: המוצר בסניף עם קוד אחר. נשמרת על המוצר ב-match_codes (chain_id -> item_code)
+function applyMatches(list) {
+  for (const m of list) {
+    const p = byBarcode.get(m.barcode);
+    if (!p || p.unit === "kg") continue;
+    p.match_codes = { ...(p.match_codes || {}), [m.chain_id]: m.item_code };
+  }
+}
+
+// הברקוד המקורי חזר לסניף: הוא קודם להתאמה
+function dropReturnedMatches(rows) {
+  const has = new Set(rows.map((r) => `${r.chain_id}:${r.item_code}`));
+  for (const p of byBarcode.values()) {
+    if (!p.match_codes) continue;
+    for (const chainId of Object.keys(p.match_codes)) {
+      if (has.has(`${chainId}:${p.barcode}`)) delete p.match_codes[chainId];
+    }
+  }
 }
 
 async function loadJson(path) {
@@ -1534,6 +1555,7 @@ async function init() {
   }
 
   byBarcode = new Map(products.map((p) => [p.barcode, p]));
+  matchesReady = fetchMatches().then(applyMatches).catch(() => {});
   setupCity();
   // "סל אוטומטי": נבנה ב-Supabase אחרי כל עדכון מחירים. אם לא נטען, קובץ גיבוי. אם גם הוא לא, הכפתור לא מופיע
   await refreshAutoBasket();

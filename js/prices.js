@@ -60,3 +60,14 @@ export async function fetchPromos(codes, chainIds) {
   }
   return promos;
 }
+
+// התאמות מוצרים (מיילסטון 15): אותו מוצר עם קוד אחר בסניף. הטבלה מחזירה רק התאמות פעילות (הרשאות).
+// מחזיר [{ chain_id, barcode, item_code }]
+export async function fetchMatches() {
+  const params = new URLSearchParams({ select: "chain_id,barcode,item_code" });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/product_matches?${params}`, {
+    headers: { apikey: SUPABASE_PUBLISHABLE_KEY },
+  });
+  if (!res.ok) throw new Error(`Supabase ${res.status}`);
+  return res.json();
+}

@@ -2,9 +2,15 @@
 // מוצר במשקל (unit: "kg"): מחיר לק"ג (price_per_kg) כפול הכמות בק"ג.
 
 // הקוד של המוצר ברשת: בדרך כלל הברקוד, אלא אם הרשת משתמשת בקוד אחר (chain_codes).
-// סניף נוסף של אותה רשת (codes_from) משתמש בקודים של הסניף הראשון שלה
+// סניף נוסף של אותה רשת (codes_from) משתמש בקודים של הסניף הראשון שלה.
+// match_codes: התאמה של סוכן התאמת המוצרים לסניף הזה בלבד (מיילסטון 15)
 export function codeIn(chain, product) {
-  return product.chain_codes?.[chain.codes_from ?? chain.chain_id] ?? product.barcode;
+  return product.chain_codes?.[chain.codes_from ?? chain.chain_id] ?? product.match_codes?.[chain.chain_id] ?? product.barcode;
+}
+
+// כל הקודים של מוצר בכל הסניפים: הברקוד, chain_codes והתאמות
+export function allCodes(product) {
+  return [product.barcode, ...Object.values(product.chain_codes || {}), ...Object.values(product.match_codes || {})];
 }
 
 // מוצר שהרשת הפסיקה למכור: השורה שלו לא התעדכנה בעדכון האחרון של הרשת, ונשארה עם מחיר ישן.
